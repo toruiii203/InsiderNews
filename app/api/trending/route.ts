@@ -1,19 +1,16 @@
-import { NextResponse } from "next/server"
+export const runtime = 'edge'
 
-// Fetches real trending data from freely available sources
-// - Google Trends RSS (Philippines) — no key needed
-// - GNews API (free tier, 100 req/day) — uses GNEWS_API_KEY if set
+import { NextResponse } from "next/server"
 
 async function fetchGoogleTrends(): Promise<{ tag: string; count: string; heat: number }[]> {
   try {
     const res = await fetch(
       "https://trends.google.com/trends/trendingsearches/daily/rss?geo=PH",
-      { next: { revalidate: 900 } } // cache 15 min
+      { next: { revalidate: 900 } }
     )
     if (!res.ok) throw new Error("Google Trends RSS failed")
     const xml = await res.text()
 
-    // Parse RSS <title> tags from <item> blocks
     const items = [...xml.matchAll(/<item>[\s\S]*?<title><!\[CDATA\[(.*?)\]\]><\/title>[\s\S]*?<ht:approx_traffic>(.*?)<\/ht:approx_traffic>[\s\S]*?<\/item>/g)]
 
     return items.slice(0, 6).map((m, i) => {
@@ -24,7 +21,6 @@ async function fetchGoogleTrends(): Promise<{ tag: string; count: string; heat: 
       return { tag, count: traffic, heat }
     })
   } catch {
-    // Fallback curated PH topics
     return [
       { tag: "#WestPhilippineSea", count: "48.2K", heat: 98 },
       { tag: "#BudgetHearings2026", count: "31.7K", heat: 85 },
@@ -37,7 +33,6 @@ async function fetchGoogleTrends(): Promise<{ tag: string; count: string; heat: 
 }
 
 async function fetchRegionActivity(): Promise<{ name: string; label: string; trend: string; bar: number }[]> {
-  // We derive region activity from GNews article counts per region keyword
   const gnewsKey = process.env.GNEWS_API_KEY
   const regions = [
     { name: "NCR", label: "Metro Manila", query: "Metro Manila Philippines" },
@@ -49,7 +44,6 @@ async function fetchRegionActivity(): Promise<{ name: string; label: string; tre
   ]
 
   if (!gnewsKey) {
-    // Static fallback with realistic values
     return [
       { name: "NCR", label: "Metro Manila", trend: "+18%", bar: 92 },
       { name: "Region VII", label: "Cebu", trend: "+12%", bar: 76 },

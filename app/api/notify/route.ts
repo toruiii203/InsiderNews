@@ -1,3 +1,5 @@
+export const runtime = 'edge'
+
 import { NextRequest, NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
 
@@ -52,7 +54,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "article.id and article.title are required." }, { status: 400 })
     }
 
-    // Fetch subscribers from Supabase
     const { data: subscribers, error } = await supabaseAdmin.from("subscribers").select("email")
     if (error) throw error
     if (!subscribers || subscribers.length === 0) {

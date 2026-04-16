@@ -1,3 +1,5 @@
+export const runtime = 'edge'
+
 import { NextRequest, NextResponse } from "next/server"
 
 const systemPrompt = `You are the official AI news assistant for The Insider News Philippines — a premium Philippine news publication. Your role is to:
@@ -31,7 +33,6 @@ async function callGroq(messages: { role: string; content: string }[], apiKey: s
 }
 
 async function callGemini(messages: { role: string; content: string }[], apiKey: string) {
-  // Build Gemini contents array - map "assistant" -> "model"
   const contents = messages.map((m) => ({
     role: m.role === "assistant" ? "model" : "user",
     parts: [{ text: m.content }],
@@ -67,7 +68,6 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // Prefer Groq if available, fall back to Gemini
     let message: string
     if (groqKey) {
       message = await callGroq(messages, groqKey)
