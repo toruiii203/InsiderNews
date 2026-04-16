@@ -69,11 +69,11 @@ export async function POST(req: NextRequest) {
     }
 
     let message: string
-    if (groqKey) {
-      message = await callGroq(messages, groqKey)
-    } else {
-      message = await callGemini(messages, geminiKey!)
-    }
+   if (geminiKey) {
+  message = await callGemini(messages, geminiKey!)
+} else {
+  message = await callGroq(messages, groqKey!)
+}
 
     return NextResponse.json({ message, provider: groqKey ? "groq" : "gemini" })
   } catch (error) {
