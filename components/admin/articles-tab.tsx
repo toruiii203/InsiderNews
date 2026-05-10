@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef, useCallback } from "react"
 import Image from "next/image"
-import { Plus, Edit, Trash2, Eye, Search, X, Calendar, Clock, Zap, Timer, Loader2, RefreshCw, AlertCircle } from "lucide-react"
+import { Plus, Edit, Trash2, Eye, Search, X, Calendar, Clock, Zap, Timer, Loader2, RefreshCw, AlertCircle, Upload, Link as LinkIcon, ImageIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { categories, type Article } from "@/lib/mock-data"
@@ -69,6 +69,109 @@ function DateTimePicker({ value, onChange }: { value: string; onChange: (iso: st
 }
 
 // ─── Articles Tab ─────────────────────────────────────────────────────────────
+
+// --- Media Upload Field (URL + Drag & Drop) ---
+function MediaUploadField({ value, onChange, label }: {
+  value: string
+  onChange: (url: string) => void
+  label: string
+}) {
+  const [isDragging, setIsDragging] = React.useState(false)
+  const [uploading, setUploading] = React.useState(false)
+  const [uploadError, setUploadError] = React.useState("")
+  const [tab, setTab] = React.useState<"url" | "upload">("url")
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const inp = "w-full px-4 py-2 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+
+  const uploadFile = async (file: File) => {
+    setUploading(true)
+    setUploadError("")
+    try {
+      const ext = file.name.split(".").pop()
+      const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const bucket = file.type.startsWith("video/") ? "videos" : "images"
+      const res = await fetch(`/api/upload`, {
+        method: "POST",
+        headers: {
+          "x-admin-secret": ADMIN_SECRET,
+          "x-filename": filename,
+          "x-bucket": bucket,
+          "Content-Type": file.type,
+        },
+        body: file,
+      })
+      if (!res.ok) {
+        onChange(URL.createObjectURL(file))
+        setUploadError("Upload API not set up — using local preview only.")
+        return
+      }
+      const data = await res.json()
+      onChange(data.url)
+    } catch {
+      onChange(URL.createObjectURL(file))
+      setUploadError("Upload failed — using local preview only.")
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleFiles = (files: FileList | null) => {
+    if (!files || files.length === 0) return
+    const file = files[0]
+    const allowed = ["image/jpeg","image/png","image/webp","image/gif","video/mp4","video/webm","video/quicktime"]
+    if (!allowed.includes(file.type)) { setUploadError("Unsupported file type."); return }
+    uploadFile(file)
+  }
+
+  const onDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); setIsDragging(false); handleFiles(e.dataTransfer.files)
+  }, [])
+
+  return (
+    <div className="space-y-2">
+      <label className="text-sm font-medium text-foreground">{label}</label>
+      <div className="flex rounded-lg border border-input overflow-hidden text-sm">
+        <button type="button" onClick={() => setTab("url")}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 transition-colors ${tab === "url" ? "bg-primary text-white" : "bg-background text-muted-foreground hover:bg-muted"}`}>
+          <LinkIcon className="h-3.5 w-3.5" />URL
+        </button>
+        <button type="button" onClick={() => setTab("upload")}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 transition-colors ${tab === "upload" ? "bg-primary text-white" : "bg-background text-muted-foreground hover:bg-muted"}`}>
+          <Upload className="h-3.5 w-3.5" />Upload / Drop
+        </button>
+      </div>
+      {tab === "url" && (
+        <input suppressHydrationWarning type="url" value={value}
+          onChange={e => onChange(e.target.value)} placeholder="https://example.com/image.jpg" className={inp} />
+      )}
+      {tab === "upload" && (
+        <div onDrop={onDrop} onDragOver={e => { e.preventDefault(); setIsDragging(true) }}
+          onDragLeave={() => setIsDragging(false)} onClick={() => fileInputRef.current?.click()}
+          className={`cursor-pointer rounded-lg border-2 border-dashed transition-all p-6 flex flex-col items-center gap-2 text-center ${isDragging ? "border-primary bg-primary/10" : "border-input hover:border-primary/50 hover:bg-muted/50"}`}>
+          <input ref={fileInputRef} type="file" className="hidden"
+            accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
+            onChange={e => handleFiles(e.target.files)} />
+          {uploading
+            ? <><Loader2 className="h-8 w-8 text-primary animate-spin" /><p className="text-sm text-muted-foreground">Uploading…</p></>
+            : <><ImageIcon className="h-8 w-8 text-muted-foreground" /><p className="text-sm font-medium">Drop image or video here</p><p className="text-xs text-muted-foreground">or click to browse • JPG, PNG, WEBP, GIF, MP4, WEBM, MOV</p></>}
+        </div>
+      )}
+      {uploadError && <p className="text-xs text-amber-600 flex items-start gap-1"><AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />{uploadError}</p>}
+      {value && !uploading && (
+        <div className="relative rounded-lg overflow-hidden bg-muted h-32">
+          {value.match(/\.(mp4|webm|mov)/i)
+            ? <video src={value} className="w-full h-full object-cover" muted />
+            : <Image src={value} alt="Preview" fill className="object-cover" unoptimized />}
+          <button type="button" onClick={() => onChange("")}
+            className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 hover:bg-black/80">
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function ArticlesTab() {
   const [articles, setArticles]       = useState<Article[]>([])
   const [fetchStatus, setFetchStatus] = useState<"loading"|"done"|"error">("loading")
@@ -353,10 +456,11 @@ function ArticleForm({ article, onClose, onSave }: {
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className={lbl}>Image URL</label>
-              <input suppressHydrationWarning type="url" value={formData.image_url} onChange={e => setFormData({...formData, image_url: e.target.value})} className={inp} />
-            </div>
+            <MediaUploadField
+              label="Article Image / Video"
+              value={formData.image_url}
+              onChange={url => setFormData({...formData, image_url: url})}
+            />
             <div className="space-y-1.5">
               <label className={lbl}>Tags (comma separated)</label>
               <input suppressHydrationWarning type="text" value={formData.tags} onChange={e => setFormData({...formData, tags: e.target.value})} placeholder="nation, breaking, politics" className={inp} />
