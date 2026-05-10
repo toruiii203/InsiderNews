@@ -90,18 +90,7 @@ export function Header() {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-[70px] gap-6">
 
-            {/* LEFT: vertical rule + tagline stack */}
-            <div className="hidden lg:flex items-center gap-3 shrink-0">
-              <div className="flex flex-col gap-[3px]">
-                <div className="w-6 h-[2px] bg-[#CE1126]" />
-                <div className="w-4 h-[2px] bg-[#002D72]" />
-                <div className="w-6 h-[2px] bg-[#CE1126]" />
-              </div>
-              <div>
-                <p className="text-[#002D72] dark:text-blue-300 text-[10px] font-bold tracking-[0.18em] uppercase">Est. 2024</p>
-                <p className="text-gray-400 dark:text-gray-500 text-[9px] tracking-[0.12em] uppercase font-light">The Truth, Direct from the Source.</p>
-              </div>
-            </div>
+
 
             {/* CENTER: Logo — bold, prominent */}
             <Link href="/" className="flex items-center shrink-0 mx-auto lg:mx-0 group">
