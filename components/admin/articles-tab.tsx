@@ -344,7 +344,7 @@ function ArticleForm({ article, onClose, onSave }: {
   const [publishMode, setPublishMode] = useState<"now"|"schedule">("now")
   const [saving, setSaving] = useState(false)
   const [formData, setFormData] = useState({
-    title: article?.title || "", excerpt: article?.excerpt || "", content: article?.content || "",
+    title: article?.title || "", content: article?.content || "",
     category: article?.category || "Nation", author: article?.author || "",
     image_url: article?.image_url || "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800&q=80",
     is_breaking: article?.is_breaking || false, language: (article?.language || "EN") as "EN"|"FIL",
@@ -364,7 +364,7 @@ function ArticleForm({ article, onClose, onSave }: {
     setSaving(true)
     const newArticle: Article = {
       id: article?.id || String(Date.now()),
-      title: formData.title, excerpt: formData.excerpt, content: formData.content,
+      title: formData.title, excerpt: "", content: formData.content,
       category: formData.category, author: formData.author, image_url: formData.image_url,
       published_at: formData.published_at, is_breaking: formData.is_breaking,
       language: formData.language, view_count: article?.view_count || 0,
@@ -390,10 +390,6 @@ function ArticleForm({ article, onClose, onSave }: {
             <div className="space-y-1.5">
               <label className={lbl}>Title *</label>
               <input suppressHydrationWarning type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} required className={inp} />
-            </div>
-            <div className="space-y-1.5">
-              <label className={lbl}>Excerpt *</label>
-              <textarea suppressHydrationWarning value={formData.excerpt} onChange={e => setFormData({...formData, excerpt: e.target.value})} rows={2} required className={inp} />
             </div>
             <div className="space-y-1.5">
               <label className={lbl}>Content *</label>
