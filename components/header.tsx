@@ -88,12 +88,13 @@ export function Header() {
       {/* ── Main white header bar ── */}
       <div className="bg-white dark:bg-[#0f172a] border-b-2 border-[#002D72] shadow-md">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-[70px] gap-6">
+          <div className="flex items-center justify-between h-[70px]">
 
-
+            {/* LEFT: spacer to balance right side */}
+            <div className="hidden md:flex flex-1" />
 
             {/* CENTER: Logo — bold, prominent */}
-            <Link href="/" className="flex items-center shrink-0 mx-auto lg:mx-0 group">
+            <Link href="/" className="flex items-center shrink-0 group">
               <Image
                 src="/tinph-logo.png"
                 alt="The Insider News Philippines"
@@ -105,7 +106,7 @@ export function Header() {
             </Link>
 
             {/* RIGHT: search + subscribe */}
-            <div className="hidden md:flex items-center gap-3 shrink-0">
+            <div className="hidden md:flex items-center gap-3 shrink-0 flex-1 justify-end">
               {/* Search — rectangular, sharp, newspaper-style */}
               <div className="relative">
                 <input
