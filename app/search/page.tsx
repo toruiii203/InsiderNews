@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { Suspense, useState, useMemo, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { Search as SearchIcon } from "lucide-react"
 import { Header } from "@/components/header"
@@ -10,12 +10,11 @@ import { BackToTop } from "@/components/back-to-top"
 import { MobileBottomNav } from "@/components/mobile-bottom-nav"
 import { mockArticles } from "@/lib/mock-data"
 
-export default function SearchPage() {
+function SearchContent() {
   const searchParams = useSearchParams()
   const initialQ = searchParams.get("q") || ""
   const [query, setQuery] = useState(initialQ)
 
-  // Sync query when URL param changes (e.g. navigating from header search)
   useEffect(() => {
     const q = searchParams.get("q") || ""
     setQuery(q)
@@ -35,51 +34,64 @@ export default function SearchPage() {
   }, [query])
 
   return (
+    <main className="container mx-auto px-4 py-8 pb-20 md:pb-8">
+      <div className="max-w-2xl mx-auto mb-8">
+        <h1 className="text-3xl font-serif font-bold text-foreground text-center mb-6">
+          Search News
+        </h1>
+        <div className="relative">
+          <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <input suppressHydrationWarning
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search articles by title, content, or tags..."
+            className="w-full pl-12 pr-4 py-4 rounded-xl border border-input bg-background text-lg focus:outline-none focus:ring-2 focus:ring-[#002D72]"
+            autoFocus
+          />
+        </div>
+      </div>
+
+      {query.trim() ? (
+        <div>
+          <p className="text-muted-foreground mb-6">
+            {searchResults.length} result{searchResults.length !== 1 ? "s" : ""} found for &quot;{query}&quot;
+          </p>
+          {searchResults.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {searchResults.map((article) => (
+                <ArticleCard key={article.id} article={article} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">No articles found. Try a different search term.</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">Enter a search term to find articles.</p>
+        </div>
+      )}
+    </main>
+  )
+}
+
+export default function SearchPage() {
+  return (
     <div className="min-h-screen bg-background">
       <Header />
-
-      <main className="container mx-auto px-4 py-8 pb-20 md:pb-8">
-        <div className="max-w-2xl mx-auto mb-8">
-          <h1 className="text-3xl font-serif font-bold text-foreground text-center mb-6">
-            Search News
-          </h1>
-          <div className="relative">
-            <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <input suppressHydrationWarning
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search articles by title, content, or tags..."
-              className="w-full pl-12 pr-4 py-4 rounded-xl border border-input bg-background text-lg focus:outline-none focus:ring-2 focus:ring-[#002D72]"
-              autoFocus
-            />
+      <Suspense fallback={
+        <main className="container mx-auto px-4 py-8">
+          <div className="max-w-2xl mx-auto">
+            <div className="h-8 bg-muted rounded animate-pulse mb-6 w-48 mx-auto" />
+            <div className="h-14 bg-muted rounded-xl animate-pulse" />
           </div>
-        </div>
-
-        {query.trim() ? (
-          <div>
-            <p className="text-muted-foreground mb-6">
-              {searchResults.length} result{searchResults.length !== 1 ? "s" : ""} found for &quot;{query}&quot;
-            </p>
-            {searchResults.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {searchResults.map((article) => (
-                  <ArticleCard key={article.id} article={article} />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">No articles found. Try a different search term.</p>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">Enter a search term to find articles.</p>
-          </div>
-        )}
-      </main>
-
+        </main>
+      }>
+        <SearchContent />
+      </Suspense>
       <Footer />
       <BackToTop />
       <MobileBottomNav />
