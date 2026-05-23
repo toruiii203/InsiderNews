@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { Search as SearchIcon } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
@@ -10,11 +11,18 @@ import { MobileBottomNav } from "@/components/mobile-bottom-nav"
 import { mockArticles } from "@/lib/mock-data"
 
 export default function SearchPage() {
-  const [query, setQuery] = useState("")
+  const searchParams = useSearchParams()
+  const initialQ = searchParams.get("q") || ""
+  const [query, setQuery] = useState(initialQ)
+
+  // Sync query when URL param changes (e.g. navigating from header search)
+  useEffect(() => {
+    const q = searchParams.get("q") || ""
+    setQuery(q)
+  }, [searchParams])
 
   const searchResults = useMemo(() => {
     if (!query.trim()) return []
-    
     const lowerQuery = query.toLowerCase()
     return mockArticles.filter(
       article =>
@@ -31,7 +39,6 @@ export default function SearchPage() {
       <Header />
 
       <main className="container mx-auto px-4 py-8 pb-20 md:pb-8">
-        {/* Search Header */}
         <div className="max-w-2xl mx-auto mb-8">
           <h1 className="text-3xl font-serif font-bold text-foreground text-center mb-6">
             Search News
@@ -43,19 +50,17 @@ export default function SearchPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search articles by title, content, or tags..."
-              className="w-full pl-12 pr-4 py-4 rounded-xl border border-input bg-background text-lg focus:outline-none focus:ring-2 focus:ring-[#0038A8]"
+              className="w-full pl-12 pr-4 py-4 rounded-xl border border-input bg-background text-lg focus:outline-none focus:ring-2 focus:ring-[#002D72]"
               autoFocus
             />
           </div>
         </div>
 
-        {/* Search Results */}
         {query.trim() ? (
           <div>
             <p className="text-muted-foreground mb-6">
               {searchResults.length} result{searchResults.length !== 1 ? "s" : ""} found for &quot;{query}&quot;
             </p>
-            
             {searchResults.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {searchResults.map((article) => (
@@ -64,17 +69,13 @@ export default function SearchPage() {
               </div>
             ) : (
               <div className="text-center py-12">
-                <p className="text-muted-foreground">
-                  No articles found. Try a different search term.
-                </p>
+                <p className="text-muted-foreground">No articles found. Try a different search term.</p>
               </div>
             )}
           </div>
         ) : (
           <div className="text-center py-12">
-            <p className="text-muted-foreground">
-              Enter a search term to find articles.
-            </p>
+            <p className="text-muted-foreground">Enter a search term to find articles.</p>
           </div>
         )}
       </main>
