@@ -19,7 +19,7 @@ async function callGroq(messages: { role: string; content: string }[], apiKey: s
       "Authorization": `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: "llama3-8b-8192",
+      model: "llama-3.1-8b-instant",
       max_tokens: 512,
       messages: [
         { role: "system", content: systemPrompt },
@@ -27,7 +27,12 @@ async function callGroq(messages: { role: string; content: string }[], apiKey: s
       ],
     }),
   })
-  if (!response.ok) throw new Error(`Groq API error: ${response.status}`)
+
+  if (!response.ok) {
+    const errText = await response.text()
+    throw new Error(`Groq API error ${response.status}: ${errText}`)
+  }
+
   const data = await response.json()
   return data.choices?.[0]?.message?.content || "Sorry, I couldn't generate a response."
 }
@@ -50,7 +55,12 @@ async function callGemini(messages: { role: string; content: string }[], apiKey:
       }),
     }
   )
-  if (!response.ok) throw new Error(`Gemini API error: ${response.status}`)
+
+  if (!response.ok) {
+    const errText = await response.text()
+    throw new Error(`Gemini API error ${response.status}: ${errText}`)
+  }
+
   const data = await response.json()
   return data.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't generate a response."
 }
@@ -64,20 +74,28 @@ export async function POST(req: NextRequest) {
 
     if (!groqKey && !geminiKey) {
       return NextResponse.json({
-        message: "No API key configured. Please add GROQ_API_KEY or GEMINI_API_KEY to your .env.local file.",
+        message: "No API key configured. Please add GROQ_API_KEY or GEMINI_API_KEY to your environment variables.",
       })
     }
 
     let message: string
-   if (geminiKey) {
-  message = await callGemini(messages, geminiKey!)
-} else {
-  message = await callGroq(messages, groqKey!)
-}
+    let provider: string
 
-    return NextResponse.json({ message, provider: groqKey ? "groq" : "gemini" })
+    // Try Groq first if key exists, fall back to Gemini
+    if (groqKey) {
+      message = await callGroq(messages, groqKey)
+      provider = "groq"
+    } else {
+      message = await callGemini(messages, geminiKey!)
+      provider = "gemini"
+    }
+
+    return NextResponse.json({ message, provider })
   } catch (error) {
     console.error("Chat API error:", error)
-    return NextResponse.json({ message: "An error occurred. Please check your API key and try again." })
+    const errMsg = error instanceof Error ? error.message : "Unknown error"
+    return NextResponse.json({
+      message: `An error occurred: ${errMsg}. Please check your API key and try again.`,
+    })
   }
 }
