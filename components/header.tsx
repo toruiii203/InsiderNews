@@ -124,13 +124,8 @@ export function Header() {
         <div className="bg-[#B5293A] dark:bg-[#8f1e2b]" style={{ height: "52px" }}>
           <div className="h-full flex items-center justify-center">
             <span
-              className="text-[#B5293A] dark:text-[#8f1e2b] font-serif font-bold leading-none select-none group-hover:opacity-90 transition-opacity"
-              style={{
-                fontSize: "clamp(18px, 3vw, 36px)",
-                letterSpacing: "0.18em",
-                WebkitTextStroke: "1px rgba(255,255,255,0.9)",
-                color: "transparent",
-              }}
+              className="text-white font-serif font-bold leading-none select-none group-hover:opacity-90 transition-opacity"
+              style={{ fontSize: "clamp(18px, 3vw, 36px)", letterSpacing: "0.18em" }}
             >
               PHILIPPINES
             </span>
