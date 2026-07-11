@@ -17,6 +17,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://theinsidernewsph.com'),
   title: 'The Insider News Philippines - Truth. Depth. Impact.',
   description: 'Your trusted source for Philippine news. Truth. Depth. Impact.',
   keywords: ['Philippines', 'news', 'breaking news', 'Filipino news', 'The Insider News Philippines'],
