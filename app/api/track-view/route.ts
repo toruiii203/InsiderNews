@@ -2,6 +2,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
+export const runtime = "edge"
+
 // Uses the anon key on purpose — RLS only allows inserts, not reads, from this key.
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

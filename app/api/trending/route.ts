@@ -2,6 +2,8 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
+export const runtime = "edge"
+
 // Service role key — this route reads article_views, which anon/authenticated
 // clients aren't allowed to select directly (see the RLS policy in the migration).
 const supabase = createClient(
