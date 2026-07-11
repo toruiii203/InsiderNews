@@ -6,7 +6,7 @@ import { LatestNewsFeed } from "@/components/latest-news-feed"
 import { SidebarContent } from "@/components/sidebar-content"
 import { TrendingTopics } from "@/components/trending-topics"
 import { VideoSection } from "@/components/video-section"
-import { PhPulse } from "@/components/ph-pulse"
+import { ReaderPoll } from "@/components/reader-poll"
 import { PhotoGallery } from "@/components/photo-gallery"
 import { CategorySections } from "@/components/category-sections"
 import { NewsletterSection } from "@/components/newsletter-section"
@@ -52,7 +52,7 @@ export default function HomePage() {
           <VideoSection />
         </section>
 
-        <PhPulse />
+        <ReaderPoll />
 
         <section className="container mx-auto px-4 py-6">
           <PhotoGallery />
