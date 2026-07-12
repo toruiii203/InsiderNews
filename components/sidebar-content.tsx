@@ -18,7 +18,9 @@ type Article = {
   published_at: string
 }
 
-type ArticleWithViews = Article & { liveViews: number }
+type ArticleWithViews = Article & { realViews: number }
+
+const POLL_INTERVAL_MS = 60_000
 
 function getRelativeTime(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime()
@@ -36,65 +38,69 @@ export function SidebarContent() {
   const [hotTopics, setHotTopics] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Fetch real articles on mount
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch("/api/articles?limit=20&status=published")
-        if (!res.ok) throw new Error("fetch failed")
-        const data = await res.json()
-        const articles: Article[] = Array.isArray(data) ? data : data.articles ?? []
+        const [articlesRes, viewsRes] = await Promise.all([
+          fetch("/api/articles?limit=20&status=published"),
+          fetch("/api/article-views-summary"),
+        ])
+
+        if (!articlesRes.ok) throw new Error("articles fetch failed")
+        const articlesData = await articlesRes.json()
+        const articles: Article[] = Array.isArray(articlesData) ? articlesData : articlesData.articles ?? []
+
+        // If the views endpoint fails, don't block the whole sidebar —
+        // just treat every article as having 0 tracked views rather than showing nothing.
+        let last24h: Record<string, number> = {}
+        let last7d: Record<string, number> = {}
+        if (viewsRes.ok) {
+          const viewsData = await viewsRes.json()
+          last24h = viewsData.last24h ?? {}
+          last7d = viewsData.last7d ?? {}
+        }
 
         if (articles.length === 0) return
 
-        // Trending: newest 6
+        // Trending: real 24h view count first, newest published as tiebreaker
+        // so brand-new articles with 0 tracked views yet still show up sensibly.
         const trending = [...articles]
-          .sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime())
+          .map(a => ({ ...a, realViews: last24h[a.id] || 0 }))
+          .sort((a, b) => {
+            if (b.realViews !== a.realViews) return b.realViews - a.realViews
+            return new Date(b.published_at).getTime() - new Date(a.published_at).getTime()
+          })
           .slice(0, 6)
-          .map(a => ({ ...a, liveViews: a.view_count || Math.floor(Math.random() * 500 + 100) }))
 
-        // Most read: top 5 by view_count
+        // Most read: real 7-day view count, same tiebreaker
         const mostRead = [...articles]
-          .sort((a, b) => (b.view_count || 0) - (a.view_count || 0))
+          .map(a => ({ ...a, realViews: last7d[a.id] || 0 }))
+          .sort((a, b) => {
+            if (b.realViews !== a.realViews) return b.realViews - a.realViews
+            return new Date(b.published_at).getTime() - new Date(a.published_at).getTime()
+          })
           .slice(0, 5)
-          .map(a => ({ ...a, liveViews: a.view_count || Math.floor(Math.random() * 2000 + 500) }))
 
-        // Hot topics: extract unique categories + tags
         const tagSet = new Set<string>()
         articles.forEach(a => {
           if (a.category) tagSet.add(`#${a.category}`)
           a.tags?.slice(0, 2).forEach(tag => tagSet.add(`#${tag}`))
         })
-        const topics = Array.from(tagSet).slice(0, 10)
 
         setTrendingArticles(trending)
         setMostReadArticles(mostRead)
-        setHotTopics(topics)
+        setHotTopics(Array.from(tagSet).slice(0, 10))
       } catch (err) {
-        // Silently fail — no mock fallback, just empty state
         console.warn("Sidebar fetch failed:", err)
       } finally {
         setLoading(false)
       }
     }
-    load()
-  }, [])
 
-  // Simulate live view count ticking up every 5 seconds
-  useEffect(() => {
-    if (trendingArticles.length === 0) return
-    const iv = setInterval(() => {
-      setTrendingArticles(prev =>
-        prev.map(a => ({ ...a, liveViews: a.liveViews + Math.floor(Math.random() * 8) }))
-      )
-      setMostReadArticles(prev =>
-        prev
-          .map(a => ({ ...a, liveViews: a.liveViews + Math.floor(Math.random() * 12) }))
-          .sort((a, b) => b.liveViews - a.liveViews)
-      )
-    }, 5000)
+    load()
+    const iv = setInterval(load, POLL_INTERVAL_MS)
     return () => clearInterval(iv)
-  }, [trendingArticles.length])
+  }, [])
 
   if (loading) {
     return (
@@ -108,7 +114,7 @@ export function SidebarContent() {
 
   return (
     <aside className="space-y-5">
-      {/* Trending Now */}
+      {/* Trending Now — real 24h view counts */}
       <Card className="border-t-4 border-t-[#CE1126]">
         <CardHeader className="pb-2 pt-4">
           <CardTitle className="flex items-center justify-between text-base font-serif">
@@ -118,7 +124,7 @@ export function SidebarContent() {
             </span>
             <span className="flex items-center gap-1 text-[10px] font-sans font-normal text-muted-foreground">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              live
+              last 24h
             </span>
           </CardTitle>
         </CardHeader>
@@ -141,7 +147,7 @@ export function SidebarContent() {
                     <span>{getRelativeTime(article.published_at)}</span>
                     <span className="flex items-center gap-0.5">
                       <Eye className="h-2.5 w-2.5" />
-                      {article.liveViews.toLocaleString()}
+                      {article.realViews.toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -151,7 +157,7 @@ export function SidebarContent() {
         </CardContent>
       </Card>
 
-      {/* Most Read */}
+      {/* Most Read — real 7-day view counts */}
       <Card className="border-t-4 border-t-[#002D72]">
         <CardHeader className="pb-2 pt-4">
           <CardTitle className="flex items-center justify-between text-base font-serif">
@@ -161,7 +167,7 @@ export function SidebarContent() {
             </span>
             <span className="flex items-center gap-1 text-[10px] font-sans font-normal text-muted-foreground">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-              updating
+              last 7d
             </span>
           </CardTitle>
         </CardHeader>
@@ -185,7 +191,7 @@ export function SidebarContent() {
                   </h4>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                     <Eye className="h-3 w-3" />
-                    <span className="tabular-nums transition-all duration-300">{article.liveViews.toLocaleString()}</span>
+                    <span className="tabular-nums">{article.realViews.toLocaleString()}</span>
                   </div>
                 </div>
               </Link>
@@ -194,7 +200,7 @@ export function SidebarContent() {
         </CardContent>
       </Card>
 
-      {/* Hot Topics — derived from real article categories & tags */}
+      {/* Hot Topics — derived from real article categories & tags (unchanged, already real) */}
       {hotTopics.length > 0 && (
         <Card className="border-t-4 border-t-[#FCD116]">
           <CardHeader className="pb-2 pt-4">

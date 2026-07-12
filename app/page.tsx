@@ -7,7 +7,6 @@ import { SidebarContent } from "@/components/sidebar-content"
 import { TrendingTopics } from "@/components/trending-topics"
 import { VideoSection } from "@/components/video-section"
 import { ReaderPoll } from "@/components/reader-poll"
-import { PhotoGallery } from "@/components/photo-gallery"
 import { CategorySections } from "@/components/category-sections"
 import { NewsletterSection } from "@/components/newsletter-section"
 import { Footer } from "@/components/footer"
@@ -17,6 +16,7 @@ import { CurrencyCalculator } from "@/components/currency-calculator"
 import { AiNewsChatbot } from "@/components/ai-news-chatbot"
 import { WeatherWidget } from "@/components/weather-widget"
 import { ThemeSwitcher } from "@/components/theme-switcher"
+import { AdUnit } from "@/components/ad-unit"
 
 export default function HomePage() {
   return (
@@ -40,6 +40,7 @@ export default function HomePage() {
                 <WeatherWidget />
                 <ThemeSwitcher />
                 <CurrencyCalculator />
+                <AdUnit slot="REPLACE_WITH_SIDEBAR_SLOT_ID" className="min-h-[250px]" />
                 <SidebarContent />
               </div>
             </div>
@@ -52,14 +53,18 @@ export default function HomePage() {
           <VideoSection />
         </section>
 
-        <ReaderPoll />
-
-        <section className="container mx-auto px-4 py-6">
-          <PhotoGallery />
+        <section className="container mx-auto px-4 py-4">
+          <AdUnit slot="REPLACE_WITH_HOMEPAGE_FEED_SLOT_ID" className="min-h-[120px]" />
         </section>
+
+        <ReaderPoll />
 
         <section className="container mx-auto px-4">
           <CategorySections />
+        </section>
+
+        <section className="container mx-auto px-4 py-4">
+          <AdUnit slot="REPLACE_WITH_PRE_FOOTER_SLOT_ID" className="min-h-[120px]" />
         </section>
 
         <NewsletterSection />

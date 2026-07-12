@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { Menu, Search, X, Moon, Sun, Facebook, Youtube, Twitter } from "lucide-react"
 import { useTheme } from "next-themes"
@@ -106,42 +107,27 @@ export function Header() {
         </div>
       </div>
 
-      {/* ── MASTHEAD — exactly like the logo ── */}
-      <Link href="/" className="block group">
-        {/* Blue band — THE INSIDER NEWS */}
-        <div className="bg-[#1e3a72] dark:bg-[#122448]" style={{ height: "72px" }}>
-          <div className="h-full flex items-center justify-center">
-            <span
-              className="text-white font-serif font-bold leading-none select-none group-hover:opacity-90 transition-opacity"
-              style={{ fontSize: "clamp(28px, 5vw, 58px)", letterSpacing: "-0.01em" }}
-            >
-              THE INSIDER NEWS
-            </span>
-          </div>
-        </div>
-
-        {/* Red band — PHILIPPINES */}
-        <div className="bg-[#B5293A] dark:bg-[#8f1e2b]" style={{ height: "52px" }}>
-          <div className="h-full flex items-center justify-center">
-            <span
-              className="text-white font-serif font-bold leading-none select-none group-hover:opacity-90 transition-opacity"
-              style={{ fontSize: "clamp(18px, 3vw, 36px)", letterSpacing: "0.18em" }}
-            >
-              PHILIPPINES
-            </span>
-          </div>
-        </div>
-      </Link>
-
-      {/* ── CONTROLS BAR — search + subscribe, sits right below masthead ── */}
+      {/* ── MID-BAND — logo left, search center, subscribe right (Revo-style layout) ── */}
       <div className="bg-white dark:bg-[#0f172a] border-b border-[#002D72]/15 dark:border-white/10">
         <div className="container mx-auto px-6">
-          <div className="flex items-center justify-between h-11">
+          <div className="flex items-center justify-between gap-6 py-3">
 
-            {/* Desktop search */}
-            <div className="hidden md:flex items-center flex-1">
-              <div className="relative group">
-                <Search className="absolute left-0 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-300 dark:text-white/20 group-focus-within:text-[#B5293A] transition-colors" />
+            {/* Logo */}
+            <Link href="/" className="shrink-0 flex items-center group">
+              <Image
+                src="/tinph-logo.png"
+                alt="The Insider News Philippines"
+                width={72}
+                height={58}
+                priority
+                className="object-contain group-hover:opacity-90 transition-opacity"
+              />
+            </Link>
+
+            {/* Desktop search — centered */}
+            <div className="hidden md:flex items-center flex-1 max-w-md mx-auto">
+              <div className="relative w-full group">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-300 dark:text-white/20 group-focus-within:text-[#B5293A] transition-colors" />
                 <input
                   suppressHydrationWarning
                   type="text"
@@ -149,22 +135,21 @@ export function Header() {
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && handleSearch()}
-                  className="w-52 pl-6 pr-3 py-1 text-sm bg-transparent border-0 border-b border-gray-200 dark:border-white/10 text-gray-700 dark:text-white placeholder:text-gray-300 dark:placeholder:text-white/20 focus:outline-none focus:border-[#B5293A] transition-colors font-sans"
+                  className="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-full text-gray-700 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/20 focus:outline-none focus:border-[#B5293A] transition-colors font-sans"
                 />
               </div>
             </div>
 
-            <div className="flex-1 hidden md:block" />
-
+            {/* Desktop subscribe */}
             <Link
               href="/newsletter"
-              className="hidden md:inline-flex items-center bg-[#B5293A] hover:bg-[#8f1e2b] text-white text-[10px] font-black px-5 py-2 tracking-[0.2em] uppercase font-sans transition-colors"
+              className="hidden md:inline-flex shrink-0 items-center bg-[#B5293A] hover:bg-[#8f1e2b] text-white text-[10px] font-black px-5 py-2.5 tracking-[0.2em] uppercase font-sans transition-colors"
             >
               Subscribe
             </Link>
 
             {/* Mobile controls */}
-            <div className="flex items-center gap-1 md:hidden w-full justify-between">
+            <div className="flex items-center gap-1 md:hidden">
               <Button variant="ghost" size="icon" onClick={() => setIsSearchOpen(v => !v)}
                 className="h-9 w-9 text-gray-600 dark:text-gray-300">
                 {isSearchOpen ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
@@ -181,13 +166,8 @@ export function Header() {
                 </SheetTrigger>
                 <SheetContent side="right" className="w-[280px] bg-white dark:bg-[#0f172a]">
                   <div className="flex flex-col gap-1 mt-8">
-                    <div className="mb-6">
-                      <div className="bg-[#1e3a72] px-4 py-3 text-center">
-                        <p className="text-white font-serif font-bold text-xl tracking-tight">THE INSIDER NEWS</p>
-                      </div>
-                      <div className="bg-[#B5293A] px-4 py-2 text-center">
-                        <p className="text-white font-serif font-bold text-sm tracking-[0.18em]">PHILIPPINES</p>
-                      </div>
+                    <div className="mb-6 flex justify-center">
+                      <Image src="/tinph-logo.png" alt="The Insider News Philippines" width={90} height={72} className="object-contain" />
                     </div>
                     {categories.map(cat => (
                       <Link key={cat.slug} href={`/category/${cat.slug}`}
