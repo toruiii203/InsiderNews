@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Vote, CheckCircle2 } from "lucide-react"
+import { Vote, CheckCircle2, AlertCircle } from "lucide-react"
 
 type PollOption = { id: string; label: string }
 type PollData = {
@@ -21,6 +21,7 @@ export function ReaderPoll() {
   const [loading, setLoading] = useState(true)
   const [selectedOption, setSelectedOption] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [voteError, setVoteError] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -45,6 +46,7 @@ export function ReaderPoll() {
   const handleVote = async (optionId: string) => {
     if (!poll || selectedOption || submitting) return
     setSubmitting(true)
+    setVoteError(false)
 
     // Optimistic update so it feels instant
     setSelectedOption(optionId)
@@ -60,14 +62,28 @@ export function ReaderPoll() {
     localStorage.setItem(votedKey(poll.id), optionId)
 
     try {
-      await fetch("/api/poll/vote", {
+      const res = await fetch("/api/poll/vote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pollId: poll.id, optionId }),
       })
+
+      if (!res.ok) throw new Error("Vote failed to save")
     } catch {
-      // Vote already reflected optimistically — a failed network call here
-      // isn't worth rolling back the UI over for a casual engagement widget
+      // The vote didn't actually persist — roll back the optimistic UI
+      // instead of showing a false success, and let the person know / retry.
+      setSelectedOption(null)
+      localStorage.removeItem(votedKey(poll.id))
+      setPoll(prev =>
+        prev
+          ? {
+              ...prev,
+              counts: { ...prev.counts, [optionId]: Math.max(0, (prev.counts[optionId] || 1) - 1) },
+              totalVotes: Math.max(0, prev.totalVotes - 1),
+            }
+          : prev
+      )
+      setVoteError(true)
     } finally {
       setSubmitting(false)
     }
@@ -140,6 +156,13 @@ export function ReaderPoll() {
             <p className="text-xs text-muted-foreground mt-3">
               {poll.totalVotes.toLocaleString()} vote{poll.totalVotes === 1 ? "" : "s"} so far
             </p>
+          )}
+
+          {voteError && (
+            <div className="flex items-center justify-center gap-2 mt-3 text-red-600">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <p className="text-xs">Your vote didn't save — please try again.</p>
+            </div>
           )}
         </div>
       </div>
