@@ -12,6 +12,7 @@ import { BackToTop } from "@/components/back-to-top"
 import { MobileBottomNav } from "@/components/mobile-bottom-nav"
 import { JsonLd } from "@/components/json-ld"
 import { ShareButtons } from "@/components/share-buttons"
+import { ViewTracker } from "@/components/view-tracker"
 import { Button } from "@/components/ui/button"
 import { getCategoryColor, getRelativeTime, type Article } from "@/lib/mock-data"
 import { supabaseAdmin } from "@/lib/supabase"
@@ -103,6 +104,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   return (
     <div className="min-h-screen bg-background">
       <JsonLd data={jsonLd} />
+      <ViewTracker articleId={article.id} category={article.category} tags={article.tags} />
       <Header />
       <main className="container mx-auto px-4 py-8 pb-20 md:pb-8 max-w-4xl">
         <div className="mb-6">
