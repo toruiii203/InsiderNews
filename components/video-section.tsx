@@ -1,11 +1,35 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Image from "next/image"
 import { Play } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
-import { mockVideos, getCategoryColor, getRelativeTime } from "@/lib/mock-data"
+import { getCategoryColor, getRelativeTime, type Video } from "@/lib/mock-data"
 
 export function VideoSection() {
+  const [videos, setVideos] = useState<Video[]>([])
+  const [status, setStatus] = useState<"loading" | "done" | "error">("loading")
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch("/api/videos?limit=4")
+        const data = await res.json()
+        if (!cancelled) {
+          setVideos(data.videos ?? [])
+          setStatus("done")
+        }
+      } catch {
+        if (!cancelled) setStatus("error")
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  if (status === "loading") return null
+  if (status === "error" || videos.length === 0) return null
+
   return (
     <section className="py-6">
       <div className="flex items-center justify-between mb-6">
@@ -18,7 +42,7 @@ export function VideoSection() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {mockVideos.map((video) => (
+        {videos.map((video) => (
           <Card key={video.id} className="group overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
             <CardContent className="p-0">
               <a href={video.video_url} target="_blank" rel="noopener noreferrer">
