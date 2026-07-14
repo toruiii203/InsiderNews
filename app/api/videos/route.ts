@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
 
+export const runtime = "edge"
+
 // NOTE: adjust this to whatever /api/articles/route.ts actually checks
 // server-side (likely process.env.ADMIN_SECRET). Checking both here so
 // this works whether you kept one env var or split it into a public +

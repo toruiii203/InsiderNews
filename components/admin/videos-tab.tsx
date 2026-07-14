@@ -17,10 +17,28 @@ const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET ?? "change-me-in-env"
 // this file works standalone. If you'd rather share one copy, move this into
 // its own file (e.g. components/admin/media-upload-field.tsx) and import it
 // in both places instead.
-function MediaUploadField({ value, onChange, label }: {
+const FILE_TYPES = {
+  video: {
+    accept: "video/mp4,video/webm,video/quicktime,video/x-matroska",
+    allowed: ["video/mp4", "video/webm", "video/quicktime", "video/x-matroska"],
+    errorMsg: "Unsupported file type. Use MP4, WebM, MOV, or MKV.",
+    dropLabel: "Drop video here",
+    browseHint: "or click to browse • MP4, WEBM, MOV, MKV",
+  },
+  image: {
+    accept: "image/jpeg,image/png,image/webp,image/gif",
+    allowed: ["image/jpeg", "image/png", "image/webp", "image/gif"],
+    errorMsg: "Unsupported file type. Use JPG, PNG, WEBP, or GIF.",
+    dropLabel: "Drop image here",
+    browseHint: "or click to browse • JPG, PNG, WEBP, GIF",
+  },
+} as const
+
+function MediaUploadField({ value, onChange, label, kind = "video" }: {
   value: string
   onChange: (url: string) => void
   label: string
+  kind?: "video" | "image"
 }) {
   const [isDragging, setIsDragging] = React.useState(false)
   const [uploading, setUploading] = React.useState(false)
@@ -28,6 +46,7 @@ function MediaUploadField({ value, onChange, label }: {
   const [tab, setTab] = React.useState<"url" | "upload">("url")
   const fileInputRef = useRef<HTMLInputElement>(null)
   const inp = "w-full px-4 py-2 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+  const config = FILE_TYPES[kind]
 
   const uploadFile = async (file: File) => {
     setUploading(true)
@@ -64,14 +83,16 @@ function MediaUploadField({ value, onChange, label }: {
   const handleFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return
     const file = files[0]
-    const allowed = ["video/mp4", "video/webm", "video/quicktime", "video/x-matroska"]
-    if (!allowed.includes(file.type)) { setUploadError("Unsupported file type. Use MP4, WebM, MOV, or MKV."); return }
+    if (!config.allowed.includes(file.type)) { setUploadError(config.errorMsg); return }
     uploadFile(file)
   }
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault(); setIsDragging(false); handleFiles(e.dataTransfer.files)
   }, [])
+
+  const isVideoValue = kind === "video" && !!(value.match(/\.(mp4|webm|mov|mkv)/i) || value.startsWith("blob:"))
+  const isImageValue = kind === "image" && !!value && !isVideoValue
 
   return (
     <div className="space-y-2">
@@ -88,26 +109,30 @@ function MediaUploadField({ value, onChange, label }: {
       </div>
       {tab === "url" && (
         <input suppressHydrationWarning type="url" value={value}
-          onChange={e => onChange(e.target.value)} placeholder="https://youtube.com/watch?v=..." className={inp} />
+          onChange={e => onChange(e.target.value)}
+          placeholder={kind === "video" ? "https://youtube.com/watch?v=..." : "https://images.unsplash.com/..."}
+          className={inp} />
       )}
       {tab === "upload" && (
         <div onDrop={onDrop} onDragOver={e => { e.preventDefault(); setIsDragging(true) }}
           onDragLeave={() => setIsDragging(false)} onClick={() => fileInputRef.current?.click()}
           className={`cursor-pointer rounded-lg border-2 border-dashed transition-all p-6 flex flex-col items-center gap-2 text-center ${isDragging ? "border-primary bg-primary/10" : "border-input hover:border-primary/50 hover:bg-muted/50"}`}>
           <input ref={fileInputRef} type="file" className="hidden"
-            accept="video/mp4,video/webm,video/quicktime,video/x-matroska"
+            accept={config.accept}
             onChange={e => handleFiles(e.target.files)} />
           {uploading
             ? <><Loader2 className="h-8 w-8 text-primary animate-spin" /><p className="text-sm text-muted-foreground">Uploading…</p></>
-            : <><ImageIcon className="h-8 w-8 text-muted-foreground" /><p className="text-sm font-medium">Drop video here</p><p className="text-xs text-muted-foreground">or click to browse • MP4, WEBM, MOV, MKV</p></>}
+            : <><ImageIcon className="h-8 w-8 text-muted-foreground" /><p className="text-sm font-medium">{config.dropLabel}</p><p className="text-xs text-muted-foreground">{config.browseHint}</p></>}
         </div>
       )}
       {uploadError && <p className="text-xs text-amber-600 flex items-start gap-1"><AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />{uploadError}</p>}
       {value && !uploading && (
         <div className="relative rounded-lg overflow-hidden bg-muted h-32">
-          {value.match(/\.(mp4|webm|mov|mkv)/i) || value.startsWith("blob:")
+          {isVideoValue
             ? <video src={value} className="w-full h-full object-cover" muted controls />
-            : <div className="flex items-center justify-center h-full text-xs text-muted-foreground px-2 text-center">{value}</div>}
+            : isImageValue
+              ? <Image src={value} alt="Preview" fill className="object-cover" unoptimized />
+              : <div className="flex items-center justify-center h-full text-xs text-muted-foreground px-2 text-center">{value}</div>}
           <button type="button" onClick={() => onChange("")}
             className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 hover:bg-black/80">
             <X className="h-3.5 w-3.5" />
@@ -336,11 +361,12 @@ function VideoForm({ video, onClose, onSave }: VideoFormProps) {
               onChange={url => setFormData({ ...formData, video_url: url })}
             />
 
-            <div className="space-y-1.5">
-              <label className={lbl}>Thumbnail URL</label>
-              <input suppressHydrationWarning type="url" value={formData.thumbnail_url}
-                onChange={e => setFormData({ ...formData, thumbnail_url: e.target.value })} required className={inp} />
-            </div>
+            <MediaUploadField
+              label="Thumbnail URL or Upload Image"
+              kind="image"
+              value={formData.thumbnail_url}
+              onChange={url => setFormData({ ...formData, thumbnail_url: url })}
+            />
 
             <div className="space-y-1.5">
               <label className={lbl}>Category</label>
