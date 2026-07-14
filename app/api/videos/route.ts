@@ -15,11 +15,10 @@ function isAuthorized(request: Request) {
 }
 
 // GET /api/videos?limit=100 — list videos, newest first
+// Public endpoint: reads are unauthenticated on purpose so the homepage
+// and other public pages can fetch videos without shipping the admin
+// secret to the browser. Only writes (POST/PATCH/DELETE) require it.
 export async function GET(request: Request) {
-  if (!isAuthorized(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
   const { searchParams } = new URL(request.url)
   const limit = Number(searchParams.get("limit")) || 100
 
