@@ -99,7 +99,10 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     publisher: { "@type": "Organization", name: "The Insider News Philippines" },
   }
 
-  const contentParagraphs = (article.content ?? "").split("\n\n").filter(Boolean)
+  const hasContent = (article.content ?? "").trim().length > 0
+  const articleHtml = hasContent
+    ? article.content
+    : "<p class=\"text-muted-foreground\">No content available.</p>"
 
   return (
     <div className="min-h-screen bg-background">
@@ -158,15 +161,10 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           </div>
         )}
 
-        <div className="prose prose-lg max-w-none mb-8 text-foreground leading-relaxed">
-          {contentParagraphs.length > 0 ? (
-            contentParagraphs.map((para, i) => (
-              <p key={i} className="mb-4 text-base leading-relaxed">{para}</p>
-            ))
-          ) : (
-            <p className="text-muted-foreground">No content available.</p>
-          )}
-        </div>
+        <div
+          className="prose prose-lg max-w-none mb-8 text-foreground leading-relaxed"
+          dangerouslySetInnerHTML={{ __html: articleHtml }}
+        />
 
         {article.tags && article.tags.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 mb-6 pt-4 border-t">
