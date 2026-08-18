@@ -51,15 +51,25 @@ export function LatestNewsFeed() {
           </button>
         ))}
       </div>
-      <div className="space-y-4">
-        {paginatedArticles.length === 0 ? (
-          <p className="text-center py-8 text-muted-foreground">No articles yet.</p>
-        ) : paginatedArticles.map(article => (
-          <Card key={article.id} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-0">
-              <Link href={`/article/${article.id}`} className="flex gap-4 p-4 group">
+
+      {paginatedArticles.length === 0 ? (
+        <p className="text-center py-8 text-muted-foreground">No articles yet.</p>
+      ) : (
+        <Card>
+          <CardContent className="divide-y divide-border p-0">
+            {paginatedArticles.map(article => (
+              <Link
+                key={article.id}
+                href={`/article/${article.id}`}
+                className="flex gap-4 p-4 group hover:bg-muted/40 transition-colors"
+              >
                 <div className="relative w-24 h-20 shrink-0 rounded-lg overflow-hidden">
-                  <Image src={article.image_url} alt={article.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
+                  <Image
+                    src={article.image_url}
+                    alt={article.title}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -73,10 +83,11 @@ export function LatestNewsFeed() {
                   </div>
                 </div>
               </Link>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 mt-6">
           <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1,p-1))} disabled={currentPage===1}><ChevronLeft className="h-4 w-4" /></Button>
