@@ -52,6 +52,38 @@ async function getRelatedArticles(category: string, excludeId: string): Promise<
   }
 }
 
+/**
+ * Migrated / composer-saved articles sometimes store plain text with blank
+ * lines between paragraphs instead of real HTML. Browsers collapse newlines
+ * and whitespace by default, so that content renders as one dense run-on
+ * block no matter what CSS or prose plugin is applied.
+ *
+ * This normalizes the content before it's injected as HTML:
+ *  - If it already contains block-level tags (<p>, <div>, <h1-6>, <ul>, <ol>,
+ *    <blockquote>), assume it's real HTML and leave it alone.
+ *  - Otherwise, treat it as plain text: split on blank lines and wrap each
+ *    chunk in a <p> tag so paragraph spacing actually has something to apply to.
+ */
+function formatArticleContent(raw: string): string {
+  const trimmed = (raw ?? "").trim()
+  if (!trimmed) return "<p class=\"text-muted-foreground\">No content available.</p>"
+
+  const hasBlockTags = /<(p|div|h[1-6]|ul|ol|li|blockquote|figure)[\s>]/i.test(trimmed)
+  if (hasBlockTags) return trimmed
+
+  // Plain text path: split into paragraphs on blank lines (handles \n\n, \r\n\r\n, etc.)
+  const paragraphs = trimmed
+    .split(/\r?\n\s*\r?\n/)
+    .map(p => p.trim())
+    .filter(Boolean)
+
+  if (paragraphs.length === 0) return `<p>${trimmed}</p>`
+
+  return paragraphs
+    .map(p => `<p>${p.replace(/\r?\n/g, "<br />")}</p>`)
+    .join("\n")
+}
+
 export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
   try {
     const { id } = await params
@@ -99,10 +131,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     publisher: { "@type": "Organization", name: "The Insider News Philippines" },
   }
 
-  const hasContent = (article.content ?? "").trim().length > 0
-  const articleHtml = hasContent
-    ? article.content
-    : "<p class=\"text-muted-foreground\">No content available.</p>"
+  const articleHtml = formatArticleContent(article.content ?? "")
 
   return (
     <div className="min-h-screen bg-background">
