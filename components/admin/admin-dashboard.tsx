@@ -4,16 +4,17 @@ import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import {
-  LayoutDashboard, FileText, Video, Users, LogOut,
-  Plus, Menu, X, Eye, EyeOff, TrendingUp, Newspaper,
-  UserCog, Trash2, ShieldCheck, Edit3, Key, Settings2,
-  Facebook, Twitter, Youtube, Instagram, Linkedin, Globe, Mail, Phone, MapPin, Save
+  LayoutDashboard, FileText, Video, Users, LogOut, Plus, Menu, X, Eye, EyeOff,
+  TrendingUp, Newspaper, UserCog, Trash2, ShieldCheck, Edit3, Key, Settings2,
+  Facebook, Twitter, Youtube, Instagram, Linkedin, Globe, Mail, Phone, MapPin, Save,
+  Info,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArticlesTab } from "@/components/admin/articles-tab"
 import { VideosTab } from "@/components/admin/videos-tab"
 import { SubscribersTab } from "@/components/admin/subscribers-tab"
+import { AboutTab } from "@/components/admin/about-tab"
 import { mockArticles } from "@/lib/mock-data"
 import type { AdminUser } from "@/app/admin/page"
 import { saveAccounts } from "@/app/admin/page"
@@ -24,7 +25,7 @@ interface AdminDashboardProps {
   currentUser: AdminUser
 }
 
-type TabType = "dashboard" | "articles" | "videos" | "subscribers" | "accounts" | "settings"
+type TabType = "dashboard" | "articles" | "videos" | "subscribers" | "accounts" | "settings" | "about"
 
 const ROLE_LABELS: Record<AdminUser["role"], string> = {
   superadmin: "Super Admin",
@@ -47,7 +48,6 @@ export function AdminDashboard({ onLogout, currentUser }: AdminDashboardProps) {
 
   const totalViews = mockArticles.reduce((s, a) => s + a.view_count, 0)
   const breakingCount = mockArticles.filter(a => a.is_breaking).length
-
   const isSuperAdmin = currentUser.role === "superadmin"
 
   const navItems = [
@@ -55,6 +55,7 @@ export function AdminDashboard({ onLogout, currentUser }: AdminDashboardProps) {
     { id: "articles" as const, label: "Articles", icon: FileText },
     { id: "videos" as const, label: "Videos", icon: Video },
     { id: "subscribers" as const, label: "Subscribers", icon: Users },
+    { id: "about" as const, label: "About Us", icon: Info },
     ...(isSuperAdmin ? [{ id: "accounts" as const, label: "Manage Accounts", icon: UserCog }] : []),
     { id: "settings" as const, label: "Site Settings", icon: Settings2 },
   ]
@@ -66,7 +67,6 @@ export function AdminDashboard({ onLogout, currentUser }: AdminDashboardProps) {
           <Image src="/tinph-logo.png" alt="The Insider News Philippines" width={150} height={60} className="object-contain" />
         </Link>
       </div>
-
       <div className="px-4 py-3 border-b border-white/10">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full bg-[#002D72] flex items-center justify-center text-white font-bold text-sm shrink-0">
@@ -80,12 +80,12 @@ export function AdminDashboard({ onLogout, currentUser }: AdminDashboardProps) {
           </div>
         </div>
       </div>
-
       <nav className="flex-1 p-3">
         <ul className="space-y-1">
           {navItems.map((item) => (
             <li key={item.id}>
-              <button suppressHydrationWarning onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false) }}
+              <button suppressHydrationWarning
+                onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false) }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm ${
                   activeTab === item.id ? "bg-[#002D72] text-white" : "text-gray-400 hover:text-white hover:bg-white/10"
                 }`}>
@@ -96,10 +96,8 @@ export function AdminDashboard({ onLogout, currentUser }: AdminDashboardProps) {
           ))}
         </ul>
       </nav>
-
       <div className="p-3 border-t border-white/10">
-        <Button variant="ghost" onClick={onLogout}
-          className="w-full text-gray-400 hover:text-white hover:bg-white/10 justify-start text-sm">
+        <Button variant="ghost" onClick={onLogout} className="w-full text-gray-400 hover:text-white hover:bg-white/10 justify-start text-sm">
           <LogOut className="h-4 w-4 mr-3" />Sign Out
         </Button>
       </div>
@@ -122,7 +120,6 @@ export function AdminDashboard({ onLogout, currentUser }: AdminDashboardProps) {
           {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </Button>
       </div>
-
       {isMobileMenuOpen && (
         <div className="md:hidden fixed inset-0 z-40 bg-[#0A1628] flex flex-col pt-14">
           <SidebarContent />
@@ -142,7 +139,6 @@ export function AdminDashboard({ onLogout, currentUser }: AdminDashboardProps) {
                 <Plus className="h-4 w-4 mr-2" />New Article
               </Button>
             </div>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
                 { label: "Total Articles", value: mockArticles.length, sub: "+3 this week", icon: Newspaper, color: "text-[#002D72]" },
@@ -162,7 +158,6 @@ export function AdminDashboard({ onLogout, currentUser }: AdminDashboardProps) {
                 </Card>
               ))}
             </div>
-
             <Card>
               <CardHeader><CardTitle>Recent Articles</CardTitle></CardHeader>
               <CardContent>
@@ -188,6 +183,7 @@ export function AdminDashboard({ onLogout, currentUser }: AdminDashboardProps) {
         {activeTab === "articles" && <ArticlesTab />}
         {activeTab === "videos" && <VideosTab />}
         {activeTab === "subscribers" && <SubscribersTab />}
+        {activeTab === "about" && <AboutTab />}
         {activeTab === "accounts" && isSuperAdmin && <AccountsTab currentUser={currentUser} />}
         {activeTab === "settings" && <SiteSettingsTab />}
       </main>
@@ -205,7 +201,6 @@ function AccountsTab({ currentUser }: { currentUser: AdminUser }) {
   const [msg, setMsg] = useState("")
 
   const resetForm = () => { setFormData({ username: "", password: "", displayName: "", role: "reporter" }); setEditingAccount(null); setShowForm(false); setMsg("") }
-
   const openEdit = (acc: AdminUser) => {
     setEditingAccount(acc)
     setFormData({ username: acc.username, password: acc.password, displayName: acc.displayName, role: acc.role })
@@ -215,12 +210,9 @@ function AccountsTab({ currentUser }: { currentUser: AdminUser }) {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.username.trim() || !formData.password.trim() || !formData.displayName.trim()) return
-
     let updated: AdminUser[]
     if (editingAccount) {
-      updated = accounts.map(a => a.id === editingAccount.id
-        ? { ...a, ...formData }
-        : a)
+      updated = accounts.map(a => a.id === editingAccount.id ? { ...a, ...formData } : a)
       setMsg("Account updated.")
     } else {
       const dupe = accounts.find(a => a.username === formData.username)
@@ -258,7 +250,6 @@ function AccountsTab({ currentUser }: { currentUser: AdminUser }) {
 
       {msg && <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg text-sm">{msg}</div>}
 
-      {/* Form Modal */}
       {showForm && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
           <Card className="w-full max-w-md">
@@ -279,9 +270,7 @@ function AccountsTab({ currentUser }: { currentUser: AdminUser }) {
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium flex items-center gap-1"><Key className="h-3.5 w-3.5" />Password</label>
                   <div className="relative">
-                    <input suppressHydrationWarning type={showPw ? "text" : "password"} value={formData.password}
-                      onChange={e => setFormData(f => ({ ...f, password: e.target.value }))}
-                      placeholder="Set a strong password" required className={`${inputCls} pr-10`} />
+                    <input suppressHydrationWarning type={showPw ? "text" : "password"} value={formData.password} onChange={e => setFormData(f => ({ ...f, password: e.target.value }))} placeholder="Set a strong password" required className={`${inputCls} pr-10`} />
                     <button suppressHydrationWarning type="button" onClick={() => setShowPw(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                       {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -307,7 +296,6 @@ function AccountsTab({ currentUser }: { currentUser: AdminUser }) {
         </div>
       )}
 
-      {/* Accounts List */}
       <Card>
         <CardHeader><CardTitle className="text-lg">All Accounts ({accounts.length})</CardTitle></CardHeader>
         <CardContent>
@@ -327,8 +315,7 @@ function AccountsTab({ currentUser }: { currentUser: AdminUser }) {
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   <Button variant="ghost" size="icon" onClick={() => openEdit(acc)} className="h-8 w-8"><Edit3 className="h-3.5 w-3.5" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleDelete(acc.id)}
-                    className="h-8 w-8 text-destructive hover:text-destructive" disabled={acc.id === currentUser.id}>
+                  <Button variant="ghost" size="icon" onClick={() => handleDelete(acc.id)} className="h-8 w-8 text-destructive hover:text-destructive" disabled={acc.id === currentUser.id}>
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
@@ -341,14 +328,12 @@ function AccountsTab({ currentUser }: { currentUser: AdminUser }) {
   )
 }
 
-
-// ── Site Settings Tab ─────────────────────────────────────────────────────────
+// ── Site Settings Tab ───────────────────────────────────────────────────────────
 function SiteSettingsTab() {
   const [form, setForm] = useState<SiteSettings>(getSiteSettings())
   const [saved, setSaved] = useState(false)
 
-  const set = (key: keyof SiteSettings, val: string) =>
-    setForm(prev => ({ ...prev, [key]: val }))
+  const set = (key: keyof SiteSettings, val: string) => setForm(prev => ({ ...prev, [key]: val }))
 
   const handleSave = () => {
     saveSiteSettings(form)
@@ -362,14 +347,8 @@ function SiteSettingsTab() {
       <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
         {icon}{label}
       </label>
-      <input
-        suppressHydrationWarning
-        type="text"
-        value={form[field]}
-        onChange={e => set(field, e.target.value)}
-        placeholder={placeholder}
-        className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-[#002D72]"
-      />
+      <input suppressHydrationWarning type="text" value={form[field]} onChange={e => set(field, e.target.value)} placeholder={placeholder}
+        className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-[#002D72]" />
     </div>
   )
 
@@ -381,8 +360,7 @@ function SiteSettingsTab() {
           <p className="text-sm text-muted-foreground">Manage your public social links, contact info, and tagline.</p>
         </div>
         <Button onClick={handleSave} className="bg-[#002D72] hover:bg-[#001a50] text-white gap-2">
-          <Save className="h-4 w-4" />
-          {saved ? "Saved!" : "Save Changes"}
+          <Save className="h-4 w-4" /> {saved ? "Saved!" : "Save Changes"}
         </Button>
       </div>
 
@@ -392,7 +370,6 @@ function SiteSettingsTab() {
         </div>
       )}
 
-      {/* Social Links */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
@@ -401,22 +378,15 @@ function SiteSettingsTab() {
           <p className="text-xs text-muted-foreground">These appear in the header and footer. Leave blank to hide.</p>
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Facebook" field="facebook" placeholder="https://facebook.com/yourpage"
-            icon={<Facebook className="h-3.5 w-3.5 text-[#1877F2]" />} />
-          <Field label="Twitter / X" field="twitter" placeholder="https://twitter.com/yourhandle"
-            icon={<Twitter className="h-3.5 w-3.5 text-sky-400" />} />
-          <Field label="YouTube" field="youtube" placeholder="https://youtube.com/yourchannel"
-            icon={<Youtube className="h-3.5 w-3.5 text-red-500" />} />
-          <Field label="Instagram" field="instagram" placeholder="https://instagram.com/yourhandle"
-            icon={<Instagram className="h-3.5 w-3.5 text-pink-400" />} />
-          <Field label="LinkedIn" field="linkedin" placeholder="https://linkedin.com/company/..."
-            icon={<Linkedin className="h-3.5 w-3.5 text-blue-600" />} />
-          <Field label="Website" field="website" placeholder="https://yourwebsite.com"
-            icon={<Globe className="h-3.5 w-3.5 text-[#FCD116]" />} />
+          <Field label="Facebook" field="facebook" placeholder="https://facebook.com/yourpage" icon={<Facebook className="h-3.5 w-3.5 text-[#1877F2]" />} />
+          <Field label="Twitter / X" field="twitter" placeholder="https://twitter.com/yourhandle" icon={<Twitter className="h-3.5 w-3.5 text-sky-400" />} />
+          <Field label="YouTube" field="youtube" placeholder="https://youtube.com/yourchannel" icon={<Youtube className="h-3.5 w-3.5 text-red-500" />} />
+          <Field label="Instagram" field="instagram" placeholder="https://instagram.com/yourhandle" icon={<Instagram className="h-3.5 w-3.5 text-pink-400" />} />
+          <Field label="LinkedIn" field="linkedin" placeholder="https://linkedin.com/company/..." icon={<Linkedin className="h-3.5 w-3.5 text-blue-600" />} />
+          <Field label="Website" field="website" placeholder="https://yourwebsite.com" icon={<Globe className="h-3.5 w-3.5 text-[#FCD116]" />} />
         </CardContent>
       </Card>
 
-      {/* Contact Info */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
@@ -425,18 +395,14 @@ function SiteSettingsTab() {
           <p className="text-xs text-muted-foreground">Shown in the footer contact section.</p>
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Email" field="email" placeholder="news@yoursite.com"
-            icon={<Mail className="h-3.5 w-3.5 text-gray-500" />} />
-          <Field label="Phone" field="phone" placeholder="+63 (2) 8888-1234"
-            icon={<Phone className="h-3.5 w-3.5 text-gray-500" />} />
+          <Field label="Email" field="email" placeholder="news@yoursite.com" icon={<Mail className="h-3.5 w-3.5 text-gray-500" />} />
+          <Field label="Phone" field="phone" placeholder="+63 (2) 8888-1234" icon={<Phone className="h-3.5 w-3.5 text-gray-500" />} />
           <div className="sm:col-span-2">
-            <Field label="Address" field="address" placeholder="Manila, Philippines"
-              icon={<MapPin className="h-3.5 w-3.5 text-gray-500" />} />
+            <Field label="Address" field="address" placeholder="Manila, Philippines" icon={<MapPin className="h-3.5 w-3.5 text-gray-500" />} />
           </div>
         </CardContent>
       </Card>
 
-      {/* Tagline */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
@@ -445,8 +411,7 @@ function SiteSettingsTab() {
           <p className="text-xs text-muted-foreground">Shown in the footer and header tagline area.</p>
         </CardHeader>
         <CardContent>
-          <Field label="Tagline" field="tagline" placeholder="The Truth, Direct from the Source."
-            icon={<Newspaper className="h-3.5 w-3.5 text-gray-500" />} />
+          <Field label="Tagline" field="tagline" placeholder="The Truth, Direct from the Source." icon={<Newspaper className="h-3.5 w-3.5 text-gray-500" />} />
         </CardContent>
       </Card>
     </div>
