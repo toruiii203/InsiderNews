@@ -45,12 +45,12 @@ export function saveSiteSettings(s: SiteSettings) {
 }
 
 const SOCIAL_ICONS = [
-  { key: "facebook" as const,  Icon: Facebook,  color: "hover:text-[#1877F2]" },
-  { key: "twitter" as const,   Icon: Twitter,   color: "hover:text-sky-400" },
-  { key: "youtube" as const,   Icon: Youtube,   color: "hover:text-red-500" },
+  { key: "facebook" as const, Icon: Facebook, color: "hover:text-[#1877F2]" },
+  { key: "twitter" as const, Icon: Twitter, color: "hover:text-sky-400" },
+  { key: "youtube" as const, Icon: Youtube, color: "hover:text-red-500" },
   { key: "instagram" as const, Icon: Instagram, color: "hover:text-pink-400" },
-  { key: "linkedin" as const,  Icon: Linkedin,  color: "hover:text-blue-400" },
-  { key: "website" as const,   Icon: Globe,     color: "hover:text-[#FCD116]" },
+  { key: "linkedin" as const, Icon: Linkedin, color: "hover:text-blue-400" },
+  { key: "website" as const, Icon: Globe, color: "hover:text-[#FCD116]" },
 ]
 
 export function Footer() {
@@ -58,7 +58,6 @@ export function Footer() {
 
   useEffect(() => {
     setSettings(getSiteSettings())
-    // Listen for settings changes from admin
     const handler = () => setSettings(getSiteSettings())
     window.addEventListener("tinph_settings_updated", handler)
     return () => window.removeEventListener("tinph_settings_updated", handler)
@@ -68,8 +67,7 @@ export function Footer() {
     <footer className="bg-[#0A1628] text-white">
       <div className="h-[3px] bg-gradient-to-r from-[#CE1126] via-[#FCD116] to-[#CE1126]" />
       <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           {/* Brand */}
           <div className="lg:col-span-1">
             <Link href="/" className="flex items-start mb-4">
@@ -79,8 +77,7 @@ export function Footer() {
             <div className="flex gap-3 flex-wrap">
               {SOCIAL_ICONS.map(({ key, Icon, color }) =>
                 settings[key] ? (
-                  <a key={key} href={settings[key]} target="_blank" rel="noopener noreferrer"
-                    className={`text-gray-500 transition-colors ${color}`}>
+                  <a key={key} href={settings[key]} target="_blank" rel="noopener noreferrer" className={`text-gray-500 transition-colors ${color}`}>
                     <Icon className="h-4 w-4" />
                   </a>
                 ) : null
@@ -88,7 +85,7 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Sections */}
+          {/* Sections (channels) */}
           <div>
             <h4 className="text-sm font-semibold mb-4 text-[#FCD116] uppercase tracking-wider">Sections</h4>
             <ul className="space-y-2">
@@ -100,11 +97,34 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Quick Links */}
+          {/* Services */}
           <div>
-            <h4 className="text-sm font-semibold mb-4 text-[#FCD116] uppercase tracking-wider">Quick Links</h4>
+            <h4 className="text-sm font-semibold mb-4 text-[#FCD116] uppercase tracking-wider">Services</h4>
             <ul className="space-y-2">
-              {[["About Us", "/about"], ["Contact", "/contact"], ["Privacy Policy", "/privacy"], ["Terms of Service", "/terms"], ["Admin Panel", "/admin"]].map(([label, href]) => (
+              {[
+                ["Newsletter", "/newsletter"],
+                ["Search", "/search"],
+                ["Videos", "/videos"],
+                ["Contact Us", "/contact"],
+              ].map(([label, href]) => (
+                <li key={label}>
+                  <Link href={href} className="text-gray-400 hover:text-white transition-colors text-sm">{label}</Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Company */}
+          <div>
+            <h4 className="text-sm font-semibold mb-4 text-[#FCD116] uppercase tracking-wider">Company</h4>
+            <ul className="space-y-2">
+              {[
+                ["About Us", "/about"],
+                ["Our Team", "/about#team"],
+                ["Privacy Policy", "/privacy"],
+                ["Terms of Service", "/terms"],
+                ["Admin Panel", "/admin"],
+              ].map(([label, href]) => (
                 <li key={label}>
                   <Link href={href} className="text-gray-400 hover:text-white transition-colors text-sm">{label}</Link>
                 </li>
