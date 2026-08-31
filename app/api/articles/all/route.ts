@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 })
   }
   const { data, error } = await supabaseAdmin
-    .from("articles").select("*").order("published_at", { ascending: false })
+    .from("articles").select("*").order("published_at", { ascending: false }).limit(10000)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ articles: data ?? [] })
 }
