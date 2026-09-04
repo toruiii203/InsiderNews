@@ -9,8 +9,28 @@ export async function GET(req: NextRequest) {
   if (secret !== process.env.ADMIN_SECRET) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 })
   }
-  const { data, error } = await supabaseAdmin
-    .from("articles").select("*").order("published_at", { ascending: false }).limit(10000)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ articles: data ?? [] })
+  let allArticles: any[] = []
+  let from = 0
+  const limit = 500
+  let hasMore = true
+
+  while (hasMore) {
+    const { data, error } = await supabaseAdmin
+      .from("articles")
+      .select("*")
+      .order("published_at", { ascending: false })
+      .range(from, from + limit - 1)
+      
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    
+    if (data && data.length > 0) {
+      allArticles = allArticles.concat(data)
+      from += limit
+      if (data.length < limit) hasMore = false
+    } else {
+      hasMore = false
+    }
+  }
+
+  return NextResponse.json({ articles: allArticles })
 }

@@ -180,10 +180,10 @@ export function AdminDashboard({ onLogout, currentUser }: AdminDashboardProps) {
           </div>
         )}
 
-        {activeTab === "articles" && <ArticlesTab />}
-        {activeTab === "videos" && <VideosTab />}
-        {activeTab === "subscribers" && <SubscribersTab />}
-        {activeTab === "about" && <AboutTab />}
+        {activeTab === "articles" && <ArticlesTab adminSecret={currentUser.password} />}
+        {activeTab === "videos" && <VideosTab adminSecret={currentUser.password} />}
+        {activeTab === "subscribers" && <SubscribersTab adminSecret={currentUser.password} />}
+        {activeTab === "about" && <AboutTab adminSecret={currentUser.password} />}
         {activeTab === "accounts" && isSuperAdmin && <AccountsTab currentUser={currentUser} />}
         {activeTab === "settings" && <SiteSettingsTab />}
       </main>

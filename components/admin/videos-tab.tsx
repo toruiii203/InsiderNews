@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { categories, type Video } from "@/lib/mock-data"
 
-const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET ?? "change-me-in-env"
+
 
 // ─── Media Upload Field (URL + Drag & Drop) ────────────────────────────────
 // Same component/behavior as the one in articles-tab.tsx, duplicated here so
@@ -34,7 +34,9 @@ const FILE_TYPES = {
   },
 } as const
 
-function MediaUploadField({ value, onChange, label, kind = "video" }: {
+function MediaUploadField({ value, onChange, label, kind = "video", adminSecret }: {
+  adminSecret: string
+
   value: string
   onChange: (url: string) => void
   label: string
@@ -58,7 +60,7 @@ function MediaUploadField({ value, onChange, label, kind = "video" }: {
       const res = await fetch(`/api/upload`, {
         method: "POST",
         headers: {
-          "x-admin-secret": ADMIN_SECRET,
+          "x-admin-secret": adminSecret,
           "x-filename": filename,
           "x-bucket": bucket,
           "Content-Type": file.type,
@@ -144,7 +146,7 @@ function MediaUploadField({ value, onChange, label, kind = "video" }: {
 }
 
 // ─── Videos Tab ─────────────────────────────────────────────────────────────
-export function VideosTab() {
+export function VideosTab({ adminSecret }: { adminSecret: string }) {
   const [videos, setVideos] = useState<Video[]>([])
   const [fetchStatus, setFetchStatus] = useState<"loading" | "done" | "error">("loading")
   const [showAddForm, setShowAddForm] = useState(false)
@@ -154,7 +156,7 @@ export function VideosTab() {
     setFetchStatus("loading")
     try {
       const res = await fetch("/api/videos?limit=100", {
-        headers: { "x-admin-secret": ADMIN_SECRET },
+        headers: { "x-admin-secret": adminSecret },
       })
       const data = await res.json()
       setVideos(data.videos ?? [])
@@ -170,7 +172,7 @@ export function VideosTab() {
     if (!confirm("Are you sure you want to delete this video?")) return
     const res = await fetch("/api/videos", {
       method: "DELETE",
-      headers: { "Content-Type": "application/json", "x-admin-secret": ADMIN_SECRET },
+      headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret },
       body: JSON.stringify({ id }),
     })
     if (res.ok) {
@@ -199,7 +201,7 @@ export function VideosTab() {
       </div>
 
       {(showAddForm || editingVideo) && (
-        <VideoForm
+        <VideoForm adminSecret={adminSecret}
           video={editingVideo}
           onClose={() => {
             setShowAddForm(false)
@@ -209,7 +211,7 @@ export function VideosTab() {
             const method = editingVideo ? "PATCH" : "POST"
             const res = await fetch("/api/videos", {
               method,
-              headers: { "Content-Type": "application/json", "x-admin-secret": ADMIN_SECRET },
+              headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret },
               body: JSON.stringify(video),
             })
             const data = await res.json()

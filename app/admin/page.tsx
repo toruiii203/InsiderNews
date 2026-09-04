@@ -30,15 +30,15 @@ export function saveAccounts(accounts: AdminUser[]) {
 }
 
 // Primary login: check env secret first, then localStorage accounts
-function authenticate(username: string, password: string): AdminUser | null {
-  const envSecret = process.env.NEXT_PUBLIC_ADMIN_SECRET || "InsiderNews@2026!"
+async function authenticate(username: string, password: string): Promise<AdminUser | null> {
+  
 
   // Default super admin account always works using the env secret
-  if (username === "admin" && password === envSecret) {
+  if (username === "admin") { try { const res = await fetch("/api/articles/all?limit=1", { headers: { "x-admin-secret": password } }); if (!res.ok) return null; } catch { return null; } 
     return {
       id: "1",
       username: "admin",
-      password: envSecret,
+      password,
       displayName: "Super Admin",
       role: "superadmin",
       createdAt: new Date().toISOString(),
@@ -67,7 +67,7 @@ export default function AdminPage() {
     if (locked) return
     setError(""); setIsLoading(true)
     await new Promise(r => setTimeout(r, 900))
-    const match = authenticate(username, password)
+    const match = await authenticate(username, password)
     if (match) {
       setCurrentUser(match); setIsLoggedIn(true); setAttempts(0)
     } else {

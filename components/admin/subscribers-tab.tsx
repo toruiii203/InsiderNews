@@ -15,12 +15,12 @@ interface Subscriber {
   confirmed: boolean
 }
 
-const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET ?? "change-me-in-env"
+
 
 type NotifyStatus = "idle" | "loading" | "success" | "error"
 type FetchStatus = "loading" | "done" | "error"
 
-export function SubscribersTab() {
+export function SubscribersTab({ adminSecret }: { adminSecret: string }) {
   const [subscribers, setSubscribers] = useState<Subscriber[]>([])
   const [fetchStatus, setFetchStatus] = useState<FetchStatus>("loading")
 
@@ -33,7 +33,7 @@ export function SubscribersTab() {
     setFetchStatus("loading")
     try {
       const res = await fetch("/api/subscribe", {
-        headers: { "x-admin-secret": ADMIN_SECRET },
+        headers: { "x-admin-secret": adminSecret },
       })
       if (!res.ok) throw new Error("Failed")
       const data = await res.json()
@@ -57,7 +57,7 @@ export function SubscribersTab() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-admin-secret": ADMIN_SECRET,
+          "x-admin-secret": adminSecret,
         },
         body: JSON.stringify({ article }),
       })
@@ -90,7 +90,7 @@ export function SubscribersTab() {
   // ── Delete (removes from local state only — no DB yet) ──────────────────────
   const handleDelete = (email: string) => {
     if (confirm("Are you sure you want to remove this subscriber?")) {
-      fetch("/api/subscribe", { method: "DELETE", headers: { "Content-Type": "application/json", "x-admin-secret": ADMIN_SECRET }, body: JSON.stringify({ email }) }).then(() => setSubscribers(subscribers.filter((s) => s.email !== email)))
+      fetch("/api/subscribe", { method: "DELETE", headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret }, body: JSON.stringify({ email }) }).then(() => setSubscribers(subscribers.filter((s) => s.email !== email)))
     }
   }
 

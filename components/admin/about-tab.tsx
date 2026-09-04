@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET ?? "change-me-in-env"
+
 
 interface StaffMember {
   id: string
@@ -31,7 +31,7 @@ interface AboutContent {
 const inp = "w-full px-4 py-2 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-[#002D72] text-sm"
 const lbl = "text-sm font-medium text-foreground"
 
-export function AboutTab() {
+export function AboutTab({ adminSecret }: { adminSecret: string }) {
   return (
     <div className="space-y-8">
       <div>
@@ -45,14 +45,14 @@ export function AboutTab() {
         </p>
       </div>
 
-      <AboutContentEditor />
-      <StaffManager />
+      <AboutContentEditor adminSecret={adminSecret} />
+      <StaffManager adminSecret={adminSecret} />
     </div>
   )
 }
 
 // ─── About Us content editor ──────────────────────────────────────────────
-function AboutContentEditor() {
+function AboutContentEditor({ adminSecret }: { adminSecret: string }) {
   const [form, setForm] = useState<AboutContent | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -74,7 +74,7 @@ function AboutContentEditor() {
     try {
       const res = await fetch("/api/about", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", "x-admin-secret": ADMIN_SECRET },
+        headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret },
         body: JSON.stringify(form),
       })
       if (!res.ok) throw new Error()
@@ -138,7 +138,7 @@ function AboutContentEditor() {
 }
 
 // ─── Staff / Writers manager ───────────────────────────────────────────────
-function StaffManager() {
+function StaffManager({ adminSecret }: { adminSecret: string }) {
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -158,7 +158,7 @@ function StaffManager() {
     if (!confirm("Remove this staff member?")) return
     await fetch("/api/staff", {
       method: "DELETE",
-      headers: { "Content-Type": "application/json", "x-admin-secret": ADMIN_SECRET },
+      headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret },
       body: JSON.stringify({ id }),
     })
     setStaff(staff.filter(s => s.id !== id))
@@ -236,7 +236,9 @@ function StaffManager() {
   )
 }
 
-function StaffForm({ member, onClose, onSaved }: {
+function StaffForm({ member, onClose, onSaved, adminSecret }: {
+  adminSecret: string
+
   member: StaffMember | null
   onClose: () => void
   onSaved: (member: StaffMember) => void
@@ -261,7 +263,7 @@ function StaffForm({ member, onClose, onSaved }: {
       const body = member ? { id: member.id, ...form } : form
       const res = await fetch("/api/staff", {
         method,
-        headers: { "Content-Type": "application/json", "x-admin-secret": ADMIN_SECRET },
+        headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret },
         body: JSON.stringify(body),
       })
       if (!res.ok) throw new Error()

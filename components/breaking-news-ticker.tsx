@@ -34,13 +34,13 @@ export function BreakingNewsTicker() {
           <AlertCircle className="h-4 w-4 animate-pulse" />
           <span className="text-xs font-bold uppercase tracking-wide">{language === "FIL" ? "Balita" : "Breaking"}</span>
         </div>
-        <div className="overflow-hidden flex-1">
-          <div className="flex animate-marquee whitespace-nowrap gap-8">
+        <div className="overflow-hidden flex-1 relative group">
+          <div className="flex animate-marquee whitespace-nowrap gap-8 w-max group-hover:[animation-play-state:paused]">
             {items.map((article, i) => (
               <Link key={`${article.id}-${i}`} href={`/article/${article.id}`}
                 className="text-sm font-medium hover:text-yellow-300 transition-colors shrink-0">
                 {article.title}
-                <span className="mx-4 text-white/50">•</span>
+                <span className="mx-4 text-white/50">✦</span>
               </Link>
             ))}
           </div>

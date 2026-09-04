@@ -21,6 +21,9 @@ export function Header() {
   const { language, setLanguage } = useLanguage()
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
+  const [city, setCity] = useState("Loading...")
+  const [weather, setWeather] = useState("?? --�C")
+
   const [settings, setSettings] = useState<SiteSettings | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
@@ -35,12 +38,42 @@ export function Header() {
     setMounted(true)
     const update = () => {
       const now = new Date()
-      setCurrentTime(now.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }))
-      setCurrentDate(now.toLocaleDateString("en-PH", { weekday: "long", year: "numeric", month: "long", day: "numeric" }))
+      setCurrentTime(now.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }))
+      setCurrentDate(now.toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" }))
     }
     update()
     const iv = setInterval(update, 1000)
     return () => clearInterval(iv)
+  }, [])
+
+  useEffect(() => {
+    async function fetchLocation() {
+      try {
+        const locRes = await fetch("https://get.geojs.io/v1/ip/geo.json");
+        if (!locRes.ok) return;
+        const loc = await locRes.json();
+        if (loc.city) setCity(loc.city);
+        if (loc.latitude && loc.longitude) {
+          const weatherRes = await fetch("https://api.open-meteo.com/v1/forecast?latitude=" + loc.latitude + "&longitude=" + loc.longitude + "&current_weather=true");
+          if (weatherRes.ok) {
+            const w = await weatherRes.json();
+            const code = w.current_weather.weathercode;
+            const temp = w.current_weather.temperature;
+            let emoji = "☀️";
+            if (code === 1 || code === 2) emoji = "⛅";
+            else if (code === 3) emoji = "☁️";
+            else if (code >= 45 && code <= 48) emoji = "🌫️";
+            else if (code >= 51 && code <= 67) emoji = "🌧️";
+            else if (code >= 71 && code <= 86) emoji = "❄️";
+            else if (code >= 95) emoji = "⛈️";
+            setWeather(emoji + " " + temp + "°C");
+          }
+        }
+      } catch (e) {
+        setCity("Unknown");
+      }
+    }
+    fetchLocation();
   }, [])
 
   useEffect(() => {
@@ -57,160 +90,124 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full">
-
-      {/* ── UTILITY BAR ── */}
-      <div className="bg-[#0d1f45] border-b border-white/10">
-        <div className="container mx-auto px-6">
-          <div className="flex items-center justify-between h-9">
-            <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-50 w-full bg-white dark:bg-[#0f172a]">
+      
+      {/* ── TOP PILL BAR ── */}
+      <div className="container mx-auto px-4 pt-4 pb-2">
+        <div className="bg-[#1f2937] text-white rounded-[10px] shadow-lg shadow-black/10">
+          <div className="flex flex-col md:flex-row items-center justify-between min-h-[40px] px-6 py-2 gap-2 text-[10px] sm:text-[11px] font-sans tracking-wide">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 justify-center">
               <div className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#CE1126] animate-pulse" />
-                <span className="text-[#FCD116] text-[10px] font-black tracking-[0.25em] uppercase font-sans">Live</span>
+                <span className="text-gray-400 font-bold uppercase text-[9px] tracking-widest">Date</span>
+                <span className="font-bold" suppressHydrationWarning>{currentDate}</span>
               </div>
-              <div className="w-px h-3 bg-white/20" />
-              <span className="text-white/50 text-[11px] font-sans hidden sm:inline" suppressHydrationWarning>{currentDate}</span>
-              <span className="text-white/80 font-mono text-[11px] font-bold tracking-widest tabular-nums" suppressHydrationWarning>{currentTime}</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-gray-400 font-bold uppercase text-[9px] tracking-widest">Time</span>
+                <span className="font-bold" suppressHydrationWarning>{currentTime}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-gray-400 font-bold uppercase text-[9px] tracking-widest">City</span>
+                <span className="font-bold">{city}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-gray-400 font-bold uppercase text-[9px] tracking-widest">Weather</span>
+                <span className="font-bold">☀️ 29.9°C</span>
+              </div>
             </div>
-            <div className="flex items-center">
-              {settings?.facebook && (
-                <a href={settings.facebook} target="_blank" rel="noopener noreferrer"
-                  className="w-8 h-9 flex items-center justify-center text-white/40 hover:text-[#FCD116] transition-colors">
-                  <Facebook className="h-3 w-3" />
-                </a>
-              )}
-              {settings?.twitter && (
-                <a href={settings.twitter} target="_blank" rel="noopener noreferrer"
-                  className="w-8 h-9 flex items-center justify-center text-white/40 hover:text-[#FCD116] transition-colors">
-                  <Twitter className="h-3 w-3" />
-                </a>
-              )}
-              {settings?.youtube && (
-                <a href={settings.youtube} target="_blank" rel="noopener noreferrer"
-                  className="w-8 h-9 flex items-center justify-center text-white/40 hover:text-[#FCD116] transition-colors">
-                  <Youtube className="h-3 w-3" />
-                </a>
-              )}
-              <div className="w-px h-3 bg-white/20 mx-1" />
-              <button suppressHydrationWarning onClick={() => setLanguage(language === "EN" ? "FIL" : "EN")}
-                className="px-2.5 h-9 text-white/50 hover:text-[#FCD116] text-[10px] font-black tracking-widest font-sans transition-colors">
-                {language}
-              </button>
-              {mounted && (
-                <button suppressHydrationWarning onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                  className="w-8 h-9 flex items-center justify-center text-white/40 hover:text-[#FCD116] transition-colors">
-                  {theme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
-                </button>
-              )}
+            <div className="flex items-center gap-6">
+              <div className="font-bold text-gray-300">USD <span className="text-white">P62.54</span></div>
+              <div className="font-bold text-gray-300">EUR <span className="text-white">€0.86</span></div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── MID-BAND — logo left, search center, subscribe right (Revo-style layout) ── */}
-      <div className="bg-white dark:bg-[#0f172a] border-b border-[#002D72]/15 dark:border-white/10">
-        <div className="container mx-auto px-6">
-          <div className="flex items-center justify-between gap-6 py-3">
-
-            {/* Logo */}
-            <Link href="/" className="shrink-0 flex items-center group">
-              <Image
-                src="/tinph-logo.png"
-                alt="The Insider News Philippines"
-                width={72}
-                height={58}
-                priority
-                className="object-contain group-hover:opacity-90 transition-opacity"
-              />
-            </Link>
-
-            {/* Desktop search — centered */}
-            <div className="hidden md:flex items-center flex-1 max-w-md mx-auto">
-              <div className="relative w-full group">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-300 dark:text-white/20 group-focus-within:text-[#B5293A] transition-colors" />
-                <input
-                  suppressHydrationWarning
-                  type="text"
-                  placeholder="Search news..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && handleSearch()}
-                  className="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-full text-gray-700 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/20 focus:outline-none focus:border-[#B5293A] transition-colors font-sans"
-                />
-              </div>
-            </div>
-
-            {/* Desktop subscribe */}
-            <Link
-              href="/newsletter"
-              className="hidden md:inline-flex shrink-0 items-center bg-[#B5293A] hover:bg-[#8f1e2b] text-white text-[10px] font-black px-5 py-2.5 tracking-[0.2em] uppercase font-sans transition-colors"
-            >
-              Subscribe
-            </Link>
-
-            {/* Mobile controls */}
-            <div className="flex items-center gap-1 md:hidden">
-              <Button variant="ghost" size="icon" onClick={() => setIsSearchOpen(v => !v)}
-                className="h-9 w-9 text-gray-600 dark:text-gray-300">
-                {isSearchOpen ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
-              </Button>
-              <Link href="/newsletter"
-                className="bg-[#B5293A] text-white text-[10px] font-black px-4 py-1.5 tracking-widest uppercase font-sans">
-                Subscribe
-              </Link>
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-9 w-9 text-gray-600 dark:text-gray-300">
-                    <Menu className="h-5 w-5" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-[280px] bg-white dark:bg-[#0f172a]">
-                  <div className="flex flex-col gap-1 mt-8">
-                    <div className="mb-6 flex justify-center">
-                      <Image src="/tinph-logo.png" alt="The Insider News Philippines" width={90} height={72} className="object-contain" />
-                    </div>
-                    {categories.map(cat => (
-                      <Link key={cat.slug} href={`/category/${cat.slug}`}
-                        className="text-gray-700 dark:text-gray-300 hover:text-[#B5293A] py-2.5 px-3 border-b border-gray-100 dark:border-white/10 text-sm transition-colors font-medium font-sans">
-                        {getCategoryName(cat.slug, language)}
-                      </Link>
-                    ))}
-                    <Link href="/admin" className="text-[#B5293A] py-2.5 px-3 mt-4 text-sm font-bold font-sans">Admin Panel</Link>
+      {/* ── LOGO SECTION ── */}
+      <div className="container mx-auto px-4 py-4 md:py-6">
+        <div className="flex justify-center items-center relative">
+          <Link href="/" className="inline-block group">
+            <Image
+              src="/tinph-logo.png"
+              alt="The Insider News Philippines"
+              width={120}
+              height={120}
+              priority
+              className="object-contain group-hover:opacity-90 transition-opacity"
+            />
+          </Link>
+          
+          {/* Mobile menu toggle (placed here to keep it accessible) */}
+          <div className="absolute right-0 md:hidden">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-gray-600 dark:text-gray-300">
+                  <Menu className="h-6 w-6" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[280px] bg-white dark:bg-[#0f172a]">
+                <div className="flex flex-col gap-1 mt-8">
+                  <div className="mb-6 flex justify-center">
+                    <Image src="/tinph-logo.png" alt="Logo" width={120} height={40} className="object-contain" />
                   </div>
-                </SheetContent>
-              </Sheet>
-            </div>
+                  {categories.map(cat => (
+                    <Link key={cat.slug} href={`/category/${cat.slug}`}
+                      className="text-gray-700 dark:text-gray-300 hover:text-[#f59e0b] py-2.5 px-3 border-b border-gray-100 dark:border-white/10 text-sm font-bold font-sans">
+                      {getCategoryName(cat.slug, language)}
+                    </Link>
+                  ))}
+                  <div className="mt-4 px-3">
+                    <form onSubmit={handleSearch} className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input type="text" placeholder="Search..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded text-sm focus:outline-none focus:border-[#f59e0b]" />
+                    </form>
+                  </div>
+                  <Link href="/admin" className="text-[#f59e0b] py-2.5 px-3 mt-4 text-sm font-bold font-sans">Admin Panel</Link>
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
-
-          {/* Mobile search */}
-          {isSearchOpen && (
-            <div className="pb-3 md:hidden">
-              <form onSubmit={handleSearch} className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input ref={searchRef} suppressHydrationWarning type="text"
-                  placeholder="Search news..."
-                  value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm focus:outline-none focus:border-[#B5293A] font-sans" />
-              </form>
-            </div>
-          )}
         </div>
       </div>
 
       {/* ── NAV BAR ── */}
-      <nav className="bg-[#002D72] hidden md:block">
-        <div className="container mx-auto px-6">
-          <div className="flex items-center justify-center">
-            {categories.map(cat => (
-              <Link key={cat.slug} href={`/category/${cat.slug}`}
-                className="px-5 py-3 text-[12px] font-bold text-white/70 hover:text-white hover:bg-white/10 transition-all border-b-2 border-transparent hover:border-[#FCD116] tracking-[0.12em] uppercase font-sans whitespace-nowrap">
-                {getCategoryName(cat.slug, language)}
-              </Link>
-            ))}
+      <nav className="bg-[#002D72] hidden md:block border-y border-[#001a50]">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center relative min-h-[48px]">
+            <div className="flex flex-wrap items-center justify-center gap-x-2 py-1">
+              {categories.map(cat => (
+                <Link key={cat.slug} href={`/category/${cat.slug}`}
+                  className="px-3 py-2 text-[11px] font-black text-white hover:bg-white/10 transition-colors uppercase font-sans whitespace-nowrap flex items-center gap-1.5 tracking-wide">
+                  {getCategoryName(cat.slug, language)}
+                  <svg className="w-3 h-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </Link>
+              ))}
+            </div>
+            
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
+              <div className="relative group">
+                <button 
+                  onClick={() => setIsSearchOpen(!isSearchOpen)}
+                  className="text-white p-2 hover:bg-white/10 rounded-full transition-colors"
+                >
+                  {isSearchOpen ? <X className="w-4 h-4" /> : <Search className="w-4 h-4" />}
+                </button>
+                {isSearchOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-64 bg-white shadow-xl rounded-md overflow-hidden border border-gray-100 p-2 z-50">
+                    <form onSubmit={handleSearch} className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input ref={searchRef} type="text" placeholder="Search news..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded text-black focus:outline-none focus:border-[#fbbd23]" />
+                    </form>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </nav>
-
     </header>
   )
 }

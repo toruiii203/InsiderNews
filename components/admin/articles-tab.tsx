@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { categories, type Article } from "@/lib/mock-data"
 
-const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET ?? "change-me-in-env"
+
 
 // ─── Date/Time Picker ─────────────────────────────────────────────────────────
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"]
@@ -71,7 +71,9 @@ function DateTimePicker({ value, onChange }: { value: string; onChange: (iso: st
 // ─── Articles Tab ─────────────────────────────────────────────────────────────
 
 // --- Media Upload Field (URL + Drag & Drop) ---
-function MediaUploadField({ value, onChange, label }: {
+function MediaUploadField({ value, onChange, label, adminSecret }: {
+  adminSecret: string
+
   value: string
   onChange: (url: string) => void
   label: string
@@ -93,7 +95,7 @@ function MediaUploadField({ value, onChange, label }: {
       const res = await fetch(`/api/upload`, {
         method: "POST",
         headers: {
-          "x-admin-secret": ADMIN_SECRET,
+          "x-admin-secret": adminSecret,
           "x-filename": filename,
           "x-bucket": bucket,
           "Content-Type": file.type,
@@ -172,7 +174,7 @@ function MediaUploadField({ value, onChange, label }: {
   )
 }
 
-export function ArticlesTab() {
+export function ArticlesTab({ adminSecret }: { adminSecret: string }) {
   const [articles, setArticles]       = useState<Article[]>([])
   const [fetchStatus, setFetchStatus] = useState<"loading"|"done"|"error">("loading")
   const [searchQuery, setSearchQuery] = useState("")
@@ -183,12 +185,12 @@ export function ArticlesTab() {
     setFetchStatus("loading")
     try {
       const res = await fetch("/api/articles?limit=100", {
-        headers: { "x-admin-secret": ADMIN_SECRET }
+        headers: { "x-admin-secret": adminSecret }
       })
       const data = await res.json()
       // merge with scheduled (future) articles too
       const res2 = await fetch("/api/articles/all", {
-        headers: { "x-admin-secret": ADMIN_SECRET }
+        headers: { "x-admin-secret": adminSecret }
       })
       const data2 = res2.ok ? await res2.json() : { articles: [] }
       setArticles(data2.articles ?? data.articles ?? [])
@@ -204,7 +206,7 @@ export function ArticlesTab() {
     if (!confirm("Are you sure you want to delete this article?")) return
     await fetch("/api/articles", {
       method: "DELETE",
-      headers: { "Content-Type": "application/json", "x-admin-secret": ADMIN_SECRET },
+      headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret },
       body: JSON.stringify({ id }),
     })
     setArticles(articles.filter(a => a.id !== id))
@@ -253,7 +255,7 @@ export function ArticlesTab() {
             const method = editingArticle ? "PATCH" : "POST"
             const res = await fetch("/api/articles", {
               method,
-              headers: { "Content-Type": "application/json", "x-admin-secret": ADMIN_SECRET },
+              headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret },
               body: JSON.stringify({ ...article, status }),
             })
             const data = await res.json()
@@ -336,7 +338,9 @@ export function ArticlesTab() {
 }
 
 // ─── Article Form ─────────────────────────────────────────────────────────────
-function ArticleForm({ article, onClose, onSave }: {
+function ArticleForm({ article, onClose, onSave, adminSecret }: {
+  adminSecret: string
+
   article: Article | null
   onClose: () => void
   onSave: (article: Article, mode: "now" | "schedule") => Promise<void>
