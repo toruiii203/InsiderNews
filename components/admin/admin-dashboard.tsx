@@ -64,7 +64,7 @@ export function AdminDashboard({ onLogout, currentUser }: AdminDashboardProps) {
     <>
       <div className="p-4 border-b border-white/10">
         <Link href="/" className="flex items-center">
-          <Image src="/tinph-logo.png" alt="The Insider News Philippines" width={150} height={60} className="object-contain" />
+          <Image src="/tinph-logo-v2.png" alt="The Insider News Philippines" width={150} height={60} className="object-contain" />
         </Link>
       </div>
       <div className="px-4 py-3 border-b border-white/10">
@@ -114,7 +114,7 @@ export function AdminDashboard({ onLogout, currentUser }: AdminDashboardProps) {
       {/* Mobile header */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[#0A1628] text-white px-4 py-3 flex items-center justify-between">
         <div className="flex items-center">
-          <Image src="/tinph-logo.png" alt="The Insider News Philippines" width={130} height={50} className="object-contain" />
+          <Image src="/tinph-logo-v2.png" alt="The Insider News Philippines" width={130} height={50} className="object-contain" />
         </div>
         <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(v => !v)} className="text-white h-8 w-8">
           {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}

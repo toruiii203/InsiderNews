@@ -71,7 +71,7 @@ export function Footer() {
           {/* Brand */}
           <div className="lg:col-span-1">
             <Link href="/" className="flex items-start mb-4">
-              <Image src="/tinph-logo.png" alt="The Insider News Philippines" width={160} height={65} className="object-contain" />
+              <Image src="/tinph-logo-v2.png" alt="The Insider News Philippines" width={160} height={65} className="object-contain" />
             </Link>
             <p className="text-gray-400 text-sm mb-4 leading-relaxed">{settings.tagline}</p>
             <div className="flex gap-3 flex-wrap">

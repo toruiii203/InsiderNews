@@ -27,12 +27,12 @@ export const metadata: Metadata = {
     description: 'Your trusted source for Philippine news.',
     type: 'website',
     locale: 'en_PH',
-    images: ['/tinph-logo.png'],
+    images: ['/tinph-logo-v2.png'],
   },
   icons: {
-    icon: '/tinph-logo.png',
-    apple: '/tinph-logo.png',
-    shortcut: '/tinph-logo.png',
+    icon: '/tinph-logo-v2.png',
+    apple: '/tinph-logo-v2.png',
+    shortcut: '/tinph-logo-v2.png',
   },
 }
 

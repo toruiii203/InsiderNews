@@ -93,7 +93,7 @@ export default function AdminPage() {
         <CardContent className="pt-8 pb-6 px-7">
           <div className="flex justify-center mb-6">
             <Image
-              src="/tinph-logo.png"
+              src="/tinph-logo-v2.png"
               alt="The Insider News Philippines"
               width={200}
               height={80}

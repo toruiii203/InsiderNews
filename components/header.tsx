@@ -127,7 +127,7 @@ export function Header() {
         <div className="flex justify-center items-center relative">
           <Link href="/" className="inline-block group">
             <Image
-              src="/tinph-logo.png"
+              src="/tinph-logo-v2.png"
               alt="The Insider News Philippines"
               width={120}
               height={120}
@@ -147,7 +147,7 @@ export function Header() {
               <SheetContent side="right" className="w-[280px] bg-white dark:bg-[#0f172a]">
                 <div className="flex flex-col gap-1 mt-8">
                   <div className="mb-6 flex justify-center">
-                    <Image src="/tinph-logo.png" alt="Logo" width={120} height={40} className="object-contain" />
+                    <Image src="/tinph-logo-v2.png" alt="Logo" width={120} height={40} className="object-contain" />
                   </div>
                   {categories.map(cat => (
                     <Link key={cat.slug} href={`/category/${cat.slug}`}
