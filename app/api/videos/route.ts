@@ -7,11 +7,12 @@ export const runtime = "edge"
 // server-side (likely process.env.ADMIN_SECRET). Checking both here so
 // this works whether you kept one env var or split it into a public +
 // server pair.
-const ADMIN_SECRET = process.env.ADMIN_SECRET ?? process.env.NEXT_PUBLIC_ADMIN_SECRET
+const getAdminSecret = () => process.env.ADMIN_SECRET ?? process.env.NEXT_PUBLIC_ADMIN_SECRET
 
 function isAuthorized(request: Request) {
+  const adminSecret = getAdminSecret()
   const header = request.headers.get("x-admin-secret")
-  return !!ADMIN_SECRET && header === ADMIN_SECRET
+  return !!adminSecret && header === adminSecret
 }
 
 // GET /api/videos?limit=100 — list videos, newest first
