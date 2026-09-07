@@ -414,6 +414,81 @@ function SiteSettingsTab() {
           <Field label="Tagline" field="tagline" placeholder="The Truth, Direct from the Source." icon={<Newspaper className="h-3.5 w-3.5 text-gray-500" />} />
         </CardContent>
       </Card>
+
+      <BlobUrlMigration />
     </div>
+  )
+}
+
+function BlobUrlMigration() {
+  const [loading, setLoading] = useState(false)
+  const [data, setData] = useState<any>(null)
+  const [result, setResult] = useState<any>(null)
+
+  const runDryRun = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch("/api/admin/clean-blob-urls")
+      setData(await res.json())
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const applyFix = async () => {
+    if (!confirm("Are you sure? This will clear the image_url for all affected articles.")) return
+    setLoading(true)
+    try {
+      const res = await fetch("/api/admin/clean-blob-urls", { method: "POST" })
+      setResult(await res.json())
+      setData(null)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Card className="border-amber-200 bg-amber-50/50">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2 text-amber-800">
+          <AlertCircle className="h-4 w-4" /> Legacy Broken Image Cleanup (One-Time)
+        </CardTitle>
+        <p className="text-xs text-amber-700/80">Find and fix articles that have broken "blob:" image URLs from the previous upload bug.</p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {!data && !result && (
+          <Button onClick={runDryRun} disabled={loading} variant="outline" className="w-full border-amber-300 text-amber-800 hover:bg-amber-100">
+            {loading ? "Scanning..." : "Run Dry-Run (Scan Affected Articles)"}
+          </Button>
+        )}
+
+        {data && (
+          <div className="space-y-4">
+            <div className="text-sm font-medium text-amber-900">{data.message}</div>
+            <div className="max-h-60 overflow-y-auto space-y-2 border border-amber-200 rounded p-2 bg-white">
+              {data.affected_articles?.map((a: any, i: number) => (
+                <div key={a.id} className="text-xs">
+                  <span className="font-bold">{i + 1}.</span> {a.title} <span className="text-muted-foreground">(Views: {a.view_count})</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={() => setData(null)} variant="outline" className="flex-1">Cancel</Button>
+              <Button onClick={applyFix} disabled={loading} className="flex-1 bg-amber-600 hover:bg-amber-700 text-white">
+                {loading ? "Applying..." : "Confirm & Clear URLs"}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {result && (
+          <div className="p-3 bg-emerald-100 text-emerald-800 rounded text-sm">
+            <b>{result.message}</b><br/>
+            Successfully updated: {result.success_count}<br/>
+            Failed: {result.fail_count}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }

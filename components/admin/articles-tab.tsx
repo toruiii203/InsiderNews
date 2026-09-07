@@ -347,7 +347,7 @@ function ArticleForm({ article, onClose, onSave, adminSecret }: {
   const [formData, setFormData] = useState({
     title: article?.title || "", content: article?.content || "",
     category: article?.category || "Nation", author: article?.author || "",
-    image_url: article?.image_url || "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800&q=80",
+    image_url: article ? article.image_url : "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800&q=80",
     is_breaking: article?.is_breaking || false, language: (article?.language || "EN") as "EN"|"FIL",
     tags: article?.tags?.join(", ") || "", published_at: article?.published_at || new Date().toISOString(),
   })
