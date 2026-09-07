@@ -60,7 +60,7 @@ function MediaUploadField({ value, onChange, label, kind = "video", adminSecret 
       const res = await fetch(`/api/upload`, {
         method: "POST",
         headers: {
-          "x-admin-secret": adminSecret,
+          
           "x-filename": filename,
           "x-bucket": bucket,
           "Content-Type": file.type,
@@ -68,15 +68,13 @@ function MediaUploadField({ value, onChange, label, kind = "video", adminSecret 
         body: file,
       })
       if (!res.ok) {
-        onChange(URL.createObjectURL(file))
-        setUploadError("Upload API not set up — using local preview only.")
+        setUploadError(`Upload failed (${res.status}). Please check storage settings.`)
         return
       }
       const data = await res.json()
       onChange(data.url)
     } catch {
-      onChange(URL.createObjectURL(file))
-      setUploadError("Upload failed — using local preview only.")
+      setUploadError("Upload failed due to a network error.")
     } finally {
       setUploading(false)
     }
@@ -155,9 +153,7 @@ export function VideosTab({ adminSecret }: { adminSecret: string }) {
   const loadVideos = async () => {
     setFetchStatus("loading")
     try {
-      const res = await fetch("/api/videos?limit=100", {
-        headers: { "x-admin-secret": adminSecret },
-      })
+      const res = await fetch("/api/videos?limit=100", {})
       const data = await res.json()
       setVideos(data.videos ?? [])
       setFetchStatus("done")
@@ -172,7 +168,7 @@ export function VideosTab({ adminSecret }: { adminSecret: string }) {
     if (!confirm("Are you sure you want to delete this video?")) return
     const res = await fetch("/api/videos", {
       method: "DELETE",
-      headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret },
+      headers: { "Content-Type": "application/json", },
       body: JSON.stringify({ id }),
     })
     if (res.ok) {
@@ -211,7 +207,7 @@ export function VideosTab({ adminSecret }: { adminSecret: string }) {
             const method = editingVideo ? "PATCH" : "POST"
             const res = await fetch("/api/videos", {
               method,
-              headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret },
+              headers: { "Content-Type": "application/json", },
               body: JSON.stringify(video),
             })
             const data = await res.json()

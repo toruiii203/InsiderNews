@@ -1,6 +1,7 @@
 export const runtime = 'edge'
 
 import { NextRequest, NextResponse } from "next/server"
+import { verifySession } from "@/lib/session"
 import { supabaseAdmin } from "@/lib/supabase"
 
 function isValidEmail(email: string) {
@@ -34,10 +35,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const secret = req.headers.get("x-admin-secret")
-  if (secret !== process.env.ADMIN_SECRET) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 })
-  }
+  if (!await verifySession()) return NextResponse.json({ error: "Unauthorised" }, { status: 401 })
 
   const { data, error } = await supabaseAdmin
     .from("subscribers")
@@ -57,10 +55,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const secret = req.headers.get("x-admin-secret")
-  if (secret !== process.env.ADMIN_SECRET) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 })
-  }
+  if (!await verifySession()) return NextResponse.json({ error: "Unauthorised" }, { status: 401 })
   const { email } = await req.json()
   const { error } = await supabaseAdmin.from("subscribers").delete().eq("email", email)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

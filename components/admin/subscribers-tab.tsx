@@ -32,9 +32,7 @@ export function SubscribersTab({ adminSecret }: { adminSecret: string }) {
   const loadSubscribers = async () => {
     setFetchStatus("loading")
     try {
-      const res = await fetch("/api/subscribe", {
-        headers: { "x-admin-secret": adminSecret },
-      })
+      const res = await fetch("/api/subscribe", {})
       if (!res.ok) throw new Error("Failed")
       const data = await res.json()
       setSubscribers(data.subscribers ?? [])
@@ -57,7 +55,7 @@ export function SubscribersTab({ adminSecret }: { adminSecret: string }) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-admin-secret": adminSecret,
+          
         },
         body: JSON.stringify({ article }),
       })
@@ -90,7 +88,7 @@ export function SubscribersTab({ adminSecret }: { adminSecret: string }) {
   // ── Delete (removes from local state only — no DB yet) ──────────────────────
   const handleDelete = (email: string) => {
     if (confirm("Are you sure you want to remove this subscriber?")) {
-      fetch("/api/subscribe", { method: "DELETE", headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret }, body: JSON.stringify({ email }) }).then(() => setSubscribers(subscribers.filter((s) => s.email !== email)))
+      fetch("/api/subscribe", { method: "DELETE", headers: { "Content-Type": "application/json", }, body: JSON.stringify({ email }) }).then(() => setSubscribers(subscribers.filter((s) => s.email !== email)))
     }
   }
 

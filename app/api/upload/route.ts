@@ -2,6 +2,7 @@ export const runtime = "edge"
 export const dynamic = "force-dynamic"
 
 import { NextRequest, NextResponse } from "next/server"
+import { verifySession } from "@/lib/session"
 import { createClient } from "@supabase/supabase-js"
 
 const ALLOWED_TYPES: Record<string, string> = {
@@ -16,8 +17,7 @@ export async function POST(req: NextRequest) {
   const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""
   const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ""
 
-  const secret = req.headers.get("x-admin-secret")
-  if (secret !== ADMIN_SECRET) return NextResponse.json({ error: "Unauthorised" }, { status: 401 })
+  if (!await verifySession()) return NextResponse.json({ error: "Unauthorised" }, { status: 401 })
 
   const contentType = req.headers.get("content-type") ?? ""
   if (!ALLOWED_TYPES[contentType]) return NextResponse.json({ error: `Unsupported type: ${contentType}` }, { status: 400 })

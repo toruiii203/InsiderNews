@@ -1,15 +1,12 @@
 // app/api/article-views-summary/route.ts
 import { NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { supabase } from "@/lib/supabase"
 
 export const runtime = "edge"
 
 // Service role key — same reasoning as /api/trending: article_views only allows
 // inserts from anon/authenticated clients, reads happen server-side only.
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+
 
 export async function GET() {
   const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()

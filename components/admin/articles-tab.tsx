@@ -73,7 +73,6 @@ function DateTimePicker({ value, onChange }: { value: string; onChange: (iso: st
 // --- Media Upload Field (URL + Drag & Drop) ---
 function MediaUploadField({ value, onChange, label, adminSecret }: {
   adminSecret: string
-
   value: string
   onChange: (url: string) => void
   label: string
@@ -95,7 +94,7 @@ function MediaUploadField({ value, onChange, label, adminSecret }: {
       const res = await fetch(`/api/upload`, {
         method: "POST",
         headers: {
-          "x-admin-secret": adminSecret,
+          
           "x-filename": filename,
           "x-bucket": bucket,
           "Content-Type": file.type,
@@ -103,15 +102,13 @@ function MediaUploadField({ value, onChange, label, adminSecret }: {
         body: file,
       })
       if (!res.ok) {
-        onChange(URL.createObjectURL(file))
-        setUploadError("Upload API not set up — using local preview only.")
+        setUploadError(`Upload failed (${res.status}). Please check storage settings.`)
         return
       }
       const data = await res.json()
       onChange(data.url)
     } catch {
-      onChange(URL.createObjectURL(file))
-      setUploadError("Upload failed — using local preview only.")
+      setUploadError("Upload failed due to a network error.")
     } finally {
       setUploading(false)
     }
@@ -185,12 +182,12 @@ export function ArticlesTab({ adminSecret }: { adminSecret: string }) {
     setFetchStatus("loading")
     try {
       const res = await fetch("/api/articles?limit=100", {
-        headers: { "x-admin-secret": adminSecret }
+        
       })
       const data = await res.json()
       // merge with scheduled (future) articles too
       const res2 = await fetch("/api/articles/all", {
-        headers: { "x-admin-secret": adminSecret }
+        
       })
       const data2 = res2.ok ? await res2.json() : { articles: [] }
       setArticles(data2.articles ?? data.articles ?? [])
@@ -206,7 +203,7 @@ export function ArticlesTab({ adminSecret }: { adminSecret: string }) {
     if (!confirm("Are you sure you want to delete this article?")) return
     await fetch("/api/articles", {
       method: "DELETE",
-      headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret },
+      headers: { "Content-Type": "application/json", },
       body: JSON.stringify({ id }),
     })
     setArticles(articles.filter(a => a.id !== id))
@@ -255,7 +252,7 @@ export function ArticlesTab({ adminSecret }: { adminSecret: string }) {
             const method = editingArticle ? "PATCH" : "POST"
             const res = await fetch("/api/articles", {
               method,
-              headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret },
+              headers: { "Content-Type": "application/json", },
               body: JSON.stringify({ ...article, status }),
             })
             const data = await res.json()

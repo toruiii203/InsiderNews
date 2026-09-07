@@ -1,15 +1,12 @@
 // app/api/trending/route.ts
 import { NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { supabase } from "@/lib/supabase"
 
 export const runtime = "edge"
 
 // Service role key — this route reads article_views, which anon/authenticated
 // clients aren't allowed to select directly (see the RLS policy in the migration).
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+
 
 const WINDOW_HOURS = 24
 const MAX_TOPICS = 10

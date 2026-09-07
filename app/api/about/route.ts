@@ -1,6 +1,7 @@
 export const runtime = 'edge'
 
 import { NextRequest, NextResponse } from "next/server"
+import { verifySession } from "@/lib/session"
 import { supabaseAdmin } from "@/lib/supabase"
 
 export async function GET() {
@@ -15,10 +16,7 @@ export async function GET() {
 }
 
 export async function PATCH(req: NextRequest) {
-  const secret = req.headers.get("x-admin-secret")
-  if (secret !== process.env.ADMIN_SECRET) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 })
-  }
+  if (!await verifySession()) return NextResponse.json({ error: "Unauthorised" }, { status: 401 })
 
   const body = await req.json()
   const { data, error } = await supabaseAdmin

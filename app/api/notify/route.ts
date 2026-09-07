@@ -1,6 +1,7 @@
 export const runtime = 'edge'
 
 import { NextRequest, NextResponse } from "next/server"
+import { verifySession } from "@/lib/session"
 import { supabaseAdmin } from "@/lib/supabase"
 
 interface Article {
@@ -40,10 +41,7 @@ function buildEmailHtml(article: Article, baseUrl: string) {
 
 export async function POST(req: NextRequest) {
   try {
-    const secret = req.headers.get("x-admin-secret")
-    if (secret !== process.env.ADMIN_SECRET) {
-      return NextResponse.json({ error: "Unauthorised" }, { status: 401 })
-    }
+    if (!await verifySession()) return NextResponse.json({ error: "Unauthorised" }, { status: 401 })
 
     const resendKey = process.env.RESEND_API_KEY
     const fromEmail = process.env.RESEND_FROM_EMAIL ?? "newsletter@theinsiderph.com"

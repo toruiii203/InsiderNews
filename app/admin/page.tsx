@@ -33,8 +33,17 @@ export function saveAccounts(accounts: AdminUser[]) {
 async function authenticate(username: string, password: string): Promise<AdminUser | null> {
   
 
-  // Default super admin account always works using the env secret
-  if (username === "admin") { try { const res = await fetch("/api/articles/all?limit=1", { headers: { "x-admin-secret": password } }); if (!res.ok) return null; } catch { return null; } 
+  if (username === "admin") {
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ secret: password })
+      });
+      if (!res.ok) return null;
+    } catch {
+      return null;
+    }
     return {
       id: "1",
       username: "admin",
@@ -84,7 +93,10 @@ export default function AdminPage() {
   }
 
   if (isLoggedIn && currentUser) {
-    return <AdminDashboard onLogout={() => { setIsLoggedIn(false); setCurrentUser(null) }} currentUser={currentUser} />
+    return <AdminDashboard onLogout={async () => { 
+      try { await fetch("/api/auth/logout", { method: "POST" }) } catch {}
+      setIsLoggedIn(false); setCurrentUser(null) 
+    }} currentUser={currentUser} />
   }
 
   return (

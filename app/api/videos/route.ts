@@ -9,10 +9,8 @@ export const runtime = "edge"
 // server pair.
 const getAdminSecret = () => process.env.ADMIN_SECRET ?? process.env.NEXT_PUBLIC_ADMIN_SECRET
 
-function isAuthorized(request: Request) {
-  const adminSecret = getAdminSecret()
-  const header = request.headers.get("x-admin-secret")
-  return !!adminSecret && header === adminSecret
+async function isAuthorized() {
+  return !!(await verifySession());
 }
 
 // GET /api/videos?limit=100 — list videos, newest first

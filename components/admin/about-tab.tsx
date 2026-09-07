@@ -74,7 +74,7 @@ function AboutContentEditor({ adminSecret }: { adminSecret: string }) {
     try {
       const res = await fetch("/api/about", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify(form),
       })
       if (!res.ok) throw new Error()
@@ -158,7 +158,7 @@ function StaffManager({ adminSecret }: { adminSecret: string }) {
     if (!confirm("Remove this staff member?")) return
     await fetch("/api/staff", {
       method: "DELETE",
-      headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret },
+      headers: { "Content-Type": "application/json", },
       body: JSON.stringify({ id }),
     })
     setStaff(staff.filter(s => s.id !== id))
@@ -263,7 +263,7 @@ function StaffForm({ member, onClose, onSaved, adminSecret }: {
       const body = member ? { id: member.id, ...form } : form
       const res = await fetch("/api/staff", {
         method,
-        headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret },
+        headers: { "Content-Type": "application/json", },
         body: JSON.stringify(body),
       })
       if (!res.ok) throw new Error()
