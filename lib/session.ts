@@ -1,5 +1,6 @@
 import { jwtVerify, SignJWT } from "jose"
 import { cookies } from "next/headers"
+import { getRuntimeEnv } from "@/lib/env"
 
 /**
  * Resolve the cryptographic JWT signing key.
@@ -7,7 +8,7 @@ import { cookies } from "next/headers"
  * In development/test, derives from ADMIN_SECRET or uses a local test secret.
  */
 async function getJwtKey(): Promise<Uint8Array> {
-  const explicitSecret = process.env.JWT_SECRET || process.env.SESSION_SECRET
+  const explicitSecret = getRuntimeEnv("JWT_SECRET") || getRuntimeEnv("SESSION_SECRET")
 
   if (explicitSecret) {
     if (explicitSecret.length < 32) {
@@ -23,7 +24,7 @@ async function getJwtKey(): Promise<Uint8Array> {
   }
 
   // Non-production fallback (local dev / automated tests only)
-  const adminSecret = process.env.ADMIN_SECRET
+  const adminSecret = getRuntimeEnv("ADMIN_SECRET")
   if (adminSecret) {
     const namespaced = `INSIDERNEWS_DEV_ONLY_JWT:${adminSecret}`
     const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(namespaced))

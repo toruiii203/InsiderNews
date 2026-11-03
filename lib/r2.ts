@@ -38,6 +38,19 @@ function toHex(buf: ArrayBuffer): string {
  * Tries @cloudflare/next-on-pages getRequestContext(), then process.env / globalThis bindings.
  */
 async function getR2Binding(): Promise<any | null> {
+  // 1. Check direct Cloudflare request context via global symbol
+  try {
+    const symbol = Symbol.for("__cloudflare-request-context__")
+    const cfContext = (globalThis as any)[symbol]
+    if (cfContext?.env) {
+      const binding = cfContext.env.MEDIA_BUCKET ?? cfContext.env.R2_BUCKET
+      if (binding && typeof binding.put === "function") {
+        return binding
+      }
+    }
+  } catch {}
+
+  // 2. Try @cloudflare/next-on-pages dynamic import
   try {
     const { getRequestContext } = await import("@cloudflare/next-on-pages")
     const ctx = getRequestContext()

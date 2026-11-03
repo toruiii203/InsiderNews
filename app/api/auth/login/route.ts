@@ -2,6 +2,7 @@ export const runtime = "edge"
 
 import { NextRequest, NextResponse } from "next/server"
 import { createSession } from "@/lib/session"
+import { getRuntimeEnv } from "@/lib/env"
 
 // In-memory fallback rate limiting map for local dev / unconfigured KV: IP -> { attempts, resetAt }
 const memoryRateLimit = new Map<string, { attempts: number; resetAt: number }>()
@@ -103,8 +104,8 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const { username, secret } = body
 
-  const adminSecret = process.env.ADMIN_SECRET
-  const authoritativeUsername = (process.env.ADMIN_USERNAME || "admin").trim().toLowerCase()
+  const adminSecret = getRuntimeEnv("ADMIN_SECRET")
+  const authoritativeUsername = (getRuntimeEnv("ADMIN_USERNAME") || "admin").trim().toLowerCase()
   const submittedUsername = (username || "").trim().toLowerCase()
 
   // Enforce authoritative server administrator identity:

@@ -1,7 +1,8 @@
 import { neon } from "@neondatabase/serverless"
+import { getRuntimeEnv } from "@/lib/env"
 
 function getDatabaseUrl(): string {
-  const url = process.env.DATABASE_URL
+  const url = getRuntimeEnv("DATABASE_URL")
   if (!url) {
     throw new Error("DATABASE_URL environment variable is missing.")
   }
