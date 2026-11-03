@@ -356,6 +356,20 @@ function ArticleForm({ article, onClose, onSave, adminSecret }: {
     tags: article?.tags?.join(", ") || "", published_at: article?.published_at || new Date().toISOString(),
   })
 
+  useEffect(() => {
+    if (article?.id && !article.content) {
+      fetch(`/api/articles?id=${article.id}&status=all`)
+        .then(r => r.json())
+        .then(d => {
+          const loaded = d.articles?.[0]
+          if (loaded?.content) {
+            setFormData(prev => ({ ...prev, content: loaded.content }))
+          }
+        })
+        .catch(() => {})
+    }
+  }, [article?.id])
+
   const scheduledDate = new Date(formData.published_at)
   const isFuture = scheduledDate > new Date()
   const calcReadingTime = (c: string) => Math.max(1, Math.ceil(c.split(/\s+/).length / 200))
