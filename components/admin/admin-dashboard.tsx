@@ -1,13 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import {
-  LayoutDashboard, FileText, Video, Users, LogOut, Plus, Menu, X, Eye, EyeOff,
-  TrendingUp, Newspaper, UserCog, Trash2, ShieldCheck, Edit3, Key, Settings2,
+  LayoutDashboard, FileText, Video, Users, LogOut, Plus, Menu, X, Eye,
+  TrendingUp, Newspaper, UserCog, ShieldCheck, Settings2,
   Facebook, Twitter, Youtube, Instagram, Linkedin, Globe, Mail, Phone, MapPin, Save,
-  Info, AlertCircle,
+  Info, AlertCircle, Lock,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,8 +15,7 @@ import { ArticlesTab } from "@/components/admin/articles-tab"
 import { VideosTab } from "@/components/admin/videos-tab"
 import { SubscribersTab } from "@/components/admin/subscribers-tab"
 import { AboutTab } from "@/components/admin/about-tab"
-import { mockArticles } from "@/lib/mock-data"
-import { type AdminUser, saveAccounts } from "@/lib/admin-accounts"
+import { type AdminUser, PRIMARY_ADMIN_PROFILE } from "@/lib/admin-accounts"
 import { getSiteSettings, saveSiteSettings, type SiteSettings } from "@/components/footer"
 
 interface AdminDashboardProps {
@@ -37,16 +36,39 @@ const ROLE_COLORS: Record<AdminUser["role"], string> = {
   reporter: "bg-emerald-600 text-white",
 }
 
-function getAccounts(): AdminUser[] {
-  try { return JSON.parse(localStorage.getItem("tinph_admin_accounts") || "[]") } catch { return [] }
-}
-
 export function AdminDashboard({ onLogout, currentUser }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>("dashboard")
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [articles, setArticles] = useState<any[]>([])
+  const [subscribersCount, setSubscribersCount] = useState<number>(0)
+  const [loading, setLoading] = useState(true)
 
-  const totalViews = mockArticles.reduce((s, a) => s + a.view_count, 0)
-  const breakingCount = mockArticles.filter(a => a.is_breaking).length
+  useEffect(() => {
+    async function fetchDashboardData() {
+      try {
+        const [artRes, subRes] = await Promise.all([
+          fetch("/api/articles/all"),
+          fetch("/api/subscribe"),
+        ])
+        if (artRes.ok) {
+          const artData = await artRes.json()
+          setArticles(artData.articles || [])
+        }
+        if (subRes.ok) {
+          const subData = await subRes.json()
+          setSubscribersCount(subData.count ?? (subData.subscribers?.length || 0))
+        }
+      } catch (err) {
+        console.error("Failed to load dashboard data:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchDashboardData()
+  }, [])
+
+  const totalViews = articles.reduce((s, a) => s + (Number(a.view_count) || 0), 0)
+  const breakingCount = articles.filter(a => a.is_breaking).length
   const isSuperAdmin = currentUser.role === "superadmin"
 
   const navItems = [
@@ -140,10 +162,10 @@ export function AdminDashboard({ onLogout, currentUser }: AdminDashboardProps) {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { label: "Total Articles", value: mockArticles.length, sub: "+3 this week", icon: Newspaper, color: "text-[#002D72]" },
-                { label: "Total Views", value: totalViews.toLocaleString(), sub: "+12% this month", icon: Eye, color: "text-[#CE1126]" },
-                { label: "Breaking News", value: breakingCount, sub: "Active stories", icon: TrendingUp, color: "text-[#FCD116]" },
-                { label: "Subscribers", value: "1,234", sub: "+56 this week", icon: Users, color: "text-emerald-500" },
+                { label: "Total Articles", value: loading ? "..." : articles.length, sub: "Live Neon database", icon: Newspaper, color: "text-[#002D72]" },
+                { label: "Total Views", value: loading ? "..." : totalViews.toLocaleString(), sub: "Tracked article views", icon: Eye, color: "text-[#CE1126]" },
+                { label: "Breaking News", value: loading ? "..." : breakingCount, sub: "Active stories", icon: TrendingUp, color: "text-[#FCD116]" },
+                { label: "Subscribers", value: loading ? "..." : subscribersCount.toLocaleString(), sub: "Registered readers", icon: Users, color: "text-emerald-500" },
               ].map(({ label, value, sub, icon: Icon, color }) => (
                 <Card key={label}>
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -160,29 +182,37 @@ export function AdminDashboard({ onLogout, currentUser }: AdminDashboardProps) {
             <Card>
               <CardHeader><CardTitle>Recent Articles</CardTitle></CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {mockArticles.slice(0, 5).map((article) => (
-                    <div key={article.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-medium text-sm truncate">{article.title}</h3>
-                        <p className="text-xs text-muted-foreground">{article.category} · {article.author}</p>
+                {loading ? (
+                  <div className="text-sm text-muted-foreground py-4 text-center">Loading articles from Neon...</div>
+                ) : articles.length === 0 ? (
+                  <div className="text-sm text-muted-foreground py-8 text-center border border-dashed rounded-lg">
+                    No articles found in the database. Use &quot;New Article&quot; above to create your first story.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {articles.slice(0, 5).map((article) => (
+                      <div key={article.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-medium text-sm truncate">{article.title}</h3>
+                          <p className="text-xs text-muted-foreground">{article.category} · {article.author}</p>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground shrink-0">
+                          <span className="flex items-center gap-1"><Eye className="h-3 w-3" />{Number(article.view_count || 0).toLocaleString()}</span>
+                          {article.is_breaking && <span className="px-2 py-0.5 bg-[#CE1126] text-white rounded font-bold">BREAKING</span>}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground shrink-0">
-                        <span className="flex items-center gap-1"><Eye className="h-3 w-3" />{article.view_count.toLocaleString()}</span>
-                        {article.is_breaking && <span className="px-2 py-0.5 bg-[#CE1126] text-white rounded font-bold">BREAKING</span>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
         )}
 
-        {activeTab === "articles" && <ArticlesTab adminSecret={currentUser.password} />}
-        {activeTab === "videos" && <VideosTab adminSecret={currentUser.password} />}
-        {activeTab === "subscribers" && <SubscribersTab adminSecret={currentUser.password} />}
-        {activeTab === "about" && <AboutTab adminSecret={currentUser.password} />}
+        {activeTab === "articles" && <ArticlesTab />}
+        {activeTab === "videos" && <VideosTab />}
+        {activeTab === "subscribers" && <SubscribersTab />}
+        {activeTab === "about" && <AboutTab />}
         {activeTab === "accounts" && isSuperAdmin && <AccountsTab currentUser={currentUser} />}
         {activeTab === "settings" && <SiteSettingsTab />}
       </main>
@@ -190,136 +220,86 @@ export function AdminDashboard({ onLogout, currentUser }: AdminDashboardProps) {
   )
 }
 
-// ── Accounts Management Tab ───────────────────────────────────────────────────
+// ── Secure Server-Managed Accounts Tab ──────────────────────────────────────────
 function AccountsTab({ currentUser }: { currentUser: AdminUser }) {
-  const [accounts, setAccounts] = useState<AdminUser[]>(getAccounts())
-  const [showForm, setShowForm] = useState(false)
-  const [editingAccount, setEditingAccount] = useState<AdminUser | null>(null)
-  const [formData, setFormData] = useState({ username: "", password: "", displayName: "", role: "reporter" as AdminUser["role"] })
-  const [showPw, setShowPw] = useState(false)
-  const [msg, setMsg] = useState("")
-
-  const resetForm = () => { setFormData({ username: "", password: "", displayName: "", role: "reporter" }); setEditingAccount(null); setShowForm(false); setMsg("") }
-  const openEdit = (acc: AdminUser) => {
-    setEditingAccount(acc)
-    setFormData({ username: acc.username, password: acc.password, displayName: acc.displayName, role: acc.role })
-    setShowForm(true)
-  }
-
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!formData.username.trim() || !formData.password.trim() || !formData.displayName.trim()) return
-    let updated: AdminUser[]
-    if (editingAccount) {
-      updated = accounts.map(a => a.id === editingAccount.id ? { ...a, ...formData } : a)
-      setMsg("Account updated.")
-    } else {
-      const dupe = accounts.find(a => a.username === formData.username)
-      if (dupe) { setMsg("Username already exists."); return }
-      const newAcc: AdminUser = { id: String(Date.now()), ...formData, createdAt: new Date().toISOString() }
-      updated = [...accounts, newAcc]
-      setMsg("Account created.")
-    }
-    saveAccounts(updated)
-    setAccounts(updated)
-    resetForm()
-  }
-
-  const handleDelete = (id: string) => {
-    if (id === currentUser.id) { alert("You can't delete your own account."); return }
-    if (!confirm("Delete this account?")) return
-    const updated = accounts.filter(a => a.id !== id)
-    saveAccounts(updated)
-    setAccounts(updated)
-  }
-
-  const inputCls = "w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-[#002D72]"
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-serif font-bold flex items-center gap-2"><ShieldCheck className="h-6 w-6 text-[#002D72]" />Manage Accounts</h1>
-          <p className="text-sm text-muted-foreground">Create and manage editor/reporter accounts</p>
+          <h1 className="text-2xl font-serif font-bold flex items-center gap-2">
+            <ShieldCheck className="h-6 w-6 text-[#002D72]" />Manage Accounts
+          </h1>
+          <p className="text-sm text-muted-foreground">Server-authenticated administrator sessions and role permissions</p>
         </div>
-        <Button onClick={() => setShowForm(true)} className="bg-[#002D72] hover:bg-[#001a50] text-white">
-          <Plus className="h-4 w-4 mr-2" />New Account
-        </Button>
       </div>
 
-      {msg && <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg text-sm">{msg}</div>}
-
-      {showForm && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <Card className="w-full max-w-md">
-            <CardHeader className="flex flex-row items-center justify-between border-b pb-3">
-              <CardTitle className="font-serif">{editingAccount ? "Edit Account" : "Create New Account"}</CardTitle>
-              <Button variant="ghost" size="icon" onClick={resetForm}><X className="h-4 w-4" /></Button>
-            </CardHeader>
-            <CardContent className="pt-4">
-              <form onSubmit={handleSave} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Display Name</label>
-                  <input suppressHydrationWarning value={formData.displayName} onChange={e => setFormData(f => ({ ...f, displayName: e.target.value }))} placeholder="e.g. Juan dela Cruz" required className={inputCls} />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Username</label>
-                  <input suppressHydrationWarning value={formData.username} onChange={e => setFormData(f => ({ ...f, username: e.target.value }))} placeholder="e.g. jdelacruz" required className={inputCls} />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium flex items-center gap-1"><Key className="h-3.5 w-3.5" />Password</label>
-                  <div className="relative">
-                    <input suppressHydrationWarning type={showPw ? "text" : "password"} value={formData.password} onChange={e => setFormData(f => ({ ...f, password: e.target.value }))} placeholder="Set a strong password" required className={`${inputCls} pr-10`} />
-                    <button suppressHydrationWarning type="button" onClick={() => setShowPw(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                      {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Role</label>
-                  <select suppressHydrationWarning value={formData.role} onChange={e => setFormData(f => ({ ...f, role: e.target.value as AdminUser["role"] }))} className={inputCls}>
-                    <option value="reporter">Reporter — can add articles</option>
-                    <option value="editor">Editor — can add & edit articles</option>
-                    <option value="superadmin">Super Admin — full access</option>
-                  </select>
-                </div>
-                <div className="flex justify-end gap-3 pt-2 border-t">
-                  <Button type="button" variant="outline" onClick={resetForm}>Cancel</Button>
-                  <Button type="submit" className="bg-[#002D72] hover:bg-[#001a50] text-white">
-                    {editingAccount ? "Update Account" : "Create Account"}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+      <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 rounded-lg text-sm flex items-start gap-3">
+        <Lock className="h-5 w-5 shrink-0 mt-0.5" />
+        <div>
+          <p className="font-semibold">Server-Side Session Security Active</p>
+          <p className="text-xs mt-1 text-emerald-700 dark:text-emerald-400">
+            Client-side localStorage storage of passwords has been permanently deprecated.
+            All administrative privileges are authorized via cryptographically signed HTTP-only cookies verified against server secrets (`ADMIN_SECRET`).
+          </p>
         </div>
-      )}
+      </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-lg">All Accounts ({accounts.length})</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-lg">Active Administrator Profile</CardTitle>
+        </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {accounts.map(acc => (
-              <div key={acc.id} className="flex items-center gap-4 p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                <div className="w-10 h-10 rounded-full bg-[#002D72] flex items-center justify-center text-white font-bold text-sm shrink-0">
-                  {acc.displayName[0].toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium text-sm">{acc.displayName}</span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${ROLE_COLORS[acc.role]}`}>{ROLE_LABELS[acc.role]}</span>
-                    {acc.id === currentUser.id && <span className="text-[10px] text-muted-foreground">(you)</span>}
-                  </div>
-                  <p className="text-xs text-muted-foreground">@{acc.username} · Created {new Date(acc.createdAt).toLocaleDateString("en-PH")}</p>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button variant="ghost" size="icon" onClick={() => openEdit(acc)} className="h-8 w-8"><Edit3 className="h-3.5 w-3.5" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleDelete(acc.id)} className="h-8 w-8 text-destructive hover:text-destructive" disabled={acc.id === currentUser.id}>
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
+          <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/50 border border-border">
+            <div className="w-12 h-12 rounded-full bg-[#002D72] flex items-center justify-center text-white font-bold text-base shrink-0">
+              {currentUser.displayName[0]?.toUpperCase() || "A"}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-semibold text-base">{currentUser.displayName}</span>
+                <span className={`text-xs px-2 py-0.5 rounded font-bold ${ROLE_COLORS[currentUser.role]}`}>
+                  {ROLE_LABELS[currentUser.role]}
+                </span>
+                <span className="text-xs text-muted-foreground">(Current Active Session)</span>
               </div>
-            ))}
+              <p className="text-xs text-muted-foreground mt-1">
+                Username: <code className="font-mono bg-muted px-1.5 py-0.5 rounded">@{currentUser.username}</code> · Authenticated via Secure Server Session
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Role Permissions & Governance</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="p-3 rounded-lg border border-border bg-card">
+            <div className="flex items-center gap-2">
+              <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${ROLE_COLORS.superadmin}`}>Super Admin</span>
+              <span className="text-sm font-medium">Full Administrative Governance</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Authorized to publish, edit, delete articles and videos, view reader subscriber lists, manage site configuration, and run maintenance tasks.
+            </p>
+          </div>
+          <div className="p-3 rounded-lg border border-border bg-card">
+            <div className="flex items-center gap-2">
+              <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${ROLE_COLORS.editor}`}>Editor</span>
+              <span className="text-sm font-medium">Content Review and Editorial Publishing</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Authorized to write, update, and approve articles and uploaded media across all categories.
+            </p>
+          </div>
+          <div className="p-3 rounded-lg border border-border bg-card">
+            <div className="flex items-center gap-2">
+              <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${ROLE_COLORS.reporter}`}>Reporter</span>
+              <span className="text-sm font-medium">Draft Article Submission</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Authorized to submit article drafts and upload accompanying images.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -452,7 +432,7 @@ function BlobUrlMigration() {
         <CardTitle className="text-base flex items-center gap-2 text-amber-800">
           <AlertCircle className="h-4 w-4" /> Legacy Broken Image Cleanup (One-Time)
         </CardTitle>
-        <p className="text-xs text-amber-700/80">Find and fix articles that have broken "blob:" image URLs from the previous upload bug.</p>
+        <p className="text-xs text-amber-700/80">Find and fix articles that have broken &quot;blob:&quot; image URLs from the previous upload bug.</p>
       </CardHeader>
       <CardContent className="space-y-4">
         {!data && !result && (

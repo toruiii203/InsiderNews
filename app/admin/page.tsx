@@ -6,37 +6,23 @@ import { Eye, EyeOff, Loader2, AlertCircle, Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { AdminDashboard } from "@/components/admin/admin-dashboard"
+import { type AdminUser, PRIMARY_ADMIN_PROFILE } from "@/lib/admin-accounts"
 
-import { type AdminUser, getAccounts, saveAccounts } from "@/lib/admin-accounts"
-
-// Primary login: check env secret first, then localStorage accounts
-async function authenticate(username: string, password: string): Promise<AdminUser | null> {
-  
-
-  if (username === "admin") {
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ secret: password })
-      });
-      if (!res.ok) return null;
-    } catch {
-      return null;
-    }
+async function authenticate(username: string, secret: string): Promise<AdminUser | null> {
+  try {
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ secret, username }),
+    })
+    if (!res.ok) return null
     return {
-      id: "1",
-      username: "admin",
-      password,
-      displayName: "Super Admin",
-      role: "superadmin",
-      createdAt: new Date().toISOString(),
+      ...PRIMARY_ADMIN_PROFILE,
+      username: username || "admin",
     }
+  } catch {
+    return null
   }
-
-  // Check additional accounts saved in localStorage
-  const extra = getAccounts()
-  return extra.find(a => a.username === username && a.password === password) ?? null
 }
 
 export default function AdminPage() {
@@ -54,34 +40,57 @@ export default function AdminPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     if (locked) return
-    setError(""); setIsLoading(true)
-    await new Promise(r => setTimeout(r, 900))
+    setError("")
+    setIsLoading(true)
+
     const match = await authenticate(username, password)
+    setIsLoading(false)
+
     if (match) {
-      setCurrentUser(match); setIsLoggedIn(true); setAttempts(0)
+      setCurrentUser(match)
+      setIsLoggedIn(true)
+      setAttempts(0)
+      setPassword("") // Never retain plaintext password in memory
     } else {
-      const n = attempts + 1; setAttempts(n)
+      const n = attempts + 1
+      setAttempts(n)
       if (n >= 5) {
-        setLocked(true); setError("Too many failed attempts. Try again in 60 seconds.")
-        let secs = 60; setLockTimer(secs)
-        const iv = setInterval(() => { secs--; setLockTimer(secs); if (secs <= 0) { clearInterval(iv); setLocked(false); setAttempts(0); setError("") } }, 1000)
+        setLocked(true)
+        setError("Too many failed attempts. Try again in 60 seconds.")
+        let secs = 60
+        setLockTimer(secs)
+        const iv = setInterval(() => {
+          secs--
+          setLockTimer(secs)
+          if (secs <= 0) {
+            clearInterval(iv)
+            setLocked(false)
+            setAttempts(0)
+            setError("")
+          }
+        }, 1000)
       } else {
         setError(`Incorrect username or password. ${5 - n} attempt${5 - n !== 1 ? "s" : ""} remaining.`)
       }
     }
-    setIsLoading(false)
+  }
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" })
+    } catch {}
+    setIsLoggedIn(false)
+    setCurrentUser(null)
+    setPassword("")
   }
 
   if (isLoggedIn && currentUser) {
-    return <AdminDashboard onLogout={async () => { 
-      try { await fetch("/api/auth/logout", { method: "POST" }) } catch {}
-      setIsLoggedIn(false); setCurrentUser(null) 
-    }} currentUser={currentUser} />
+    return <AdminDashboard onLogout={handleLogout} currentUser={currentUser} />
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#002D72] via-[#0A1628] to-[#CE1126] flex items-center justify-center p-4">
-      <Card className="w-full max-w-sm shadow-2xl border-0">
+    <div className="min-h-screen bg-[#070E1A] flex items-center justify-center p-4">
+      <Card className="w-full max-w-sm border-white/10 bg-[#0D1F3C] text-white shadow-2xl">
         <CardContent className="pt-8 pb-6 px-7">
           <div className="flex justify-center mb-6">
             <Image
@@ -94,48 +103,79 @@ export default function AdminPage() {
             />
           </div>
 
-          <p className="text-center text-sm text-muted-foreground mb-6 tracking-wide uppercase font-medium">Admin Portal</p>
+          <div className="flex items-center gap-2 mb-6 p-2.5 rounded-lg bg-[#002D72]/40 border border-[#002D72]/60">
+            <Shield className="h-4 w-4 text-[#FCD116] shrink-0" />
+            <p className="text-xs text-blue-200">
+              Admin Portal - Authorized Editorial Staff Only
+            </p>
+          </div>
+
+          {error && (
+            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 flex items-center gap-2 text-xs text-red-400">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
 
           <form onSubmit={handleLogin} className="space-y-4">
-            {error && (
-              <div className="flex items-start gap-2 p-3 bg-destructive/10 text-destructive rounded-lg text-sm">
-                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                <span>{error}{locked && lockTimer > 0 ? ` (${lockTimer}s)` : ""}</span>
-              </div>
-            )}
-
-            <div className="space-y-1.5">
-              <label htmlFor="username" className="text-sm font-medium">Username</label>
-              <input suppressHydrationWarning id="username" type="text" value={username}
-                onChange={e => setUsername(e.target.value)} placeholder="Enter username"
-                required disabled={locked}
-                className="w-full px-4 py-2.5 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-[#002D72] disabled:opacity-50 text-sm" />
+            <div>
+              <label className="block text-xs font-semibold text-gray-300 mb-1.5 uppercase tracking-wider">
+                Username
+              </label>
+              <input
+                type="text"
+                autoComplete="username"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                placeholder="admin"
+                disabled={locked || isLoading}
+                className="w-full px-3.5 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-[#002D72] focus:ring-1 focus:ring-[#002D72] disabled:opacity-50 transition-colors"
+              />
             </div>
 
-            <div className="space-y-1.5">
-              <label htmlFor="password" className="text-sm font-medium">Password</label>
+            <div>
+              <label className="block text-xs font-semibold text-gray-300 mb-1.5 uppercase tracking-wider">
+                Password
+              </label>
               <div className="relative">
-                <input suppressHydrationWarning id="password" type={showPassword ? "text" : "password"}
-                  value={password} onChange={e => setPassword(e.target.value)}
-                  placeholder="Enter password" required disabled={locked}
-                  className="w-full px-4 py-2.5 pr-10 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-[#002D72] disabled:opacity-50 text-sm" />
-                <button suppressHydrationWarning type="button" onClick={() => setShowPassword(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  disabled={locked || isLoading}
+                  className="w-full px-3.5 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-[#002D72] focus:ring-1 focus:ring-[#002D72] disabled:opacity-50 pr-10 transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
 
-            <Button type="submit" disabled={isLoading || locked}
-              className="w-full bg-[#002D72] hover:bg-[#001a50] text-white h-10">
-              {isLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Signing in...</>
-                : locked ? `Locked (${lockTimer}s)`
-                : <><Shield className="h-4 w-4 mr-2" />Sign In</>}
+            <Button
+              type="submit"
+              disabled={locked || isLoading || !username.trim() || !password.trim()}
+              className="w-full py-2.5 bg-[#002D72] hover:bg-[#001f52] text-white font-semibold text-sm rounded-lg transition-colors mt-2"
+            >
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Authenticating...
+                </span>
+              ) : locked ? (
+                `Locked (${lockTimer}s)`
+              ) : (
+                "Sign In"
+              )}
             </Button>
           </form>
 
-          <p className="text-center text-[11px] text-muted-foreground mt-5 border-t border-border pt-4">
-            Contact your administrator for login credentials.
+          <p className="text-center text-xs text-gray-500 mt-6">
+            The Insider News Philippines CMS · Neon + Cloudflare
           </p>
         </CardContent>
       </Card>

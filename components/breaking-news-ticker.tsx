@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { AlertCircle } from "lucide-react"
-import { mockArticles, type Article } from "@/lib/mock-data"
+import { type Article } from "@/lib/mock-data"
 import { useLanguage } from "@/lib/language-context"
 
 export function BreakingNewsTicker() {
@@ -11,20 +11,17 @@ export function BreakingNewsTicker() {
   const { language } = useLanguage()
 
   useEffect(() => {
-    // Start with mock breaking news, then try real data
-    const mockBreaking = mockArticles.filter(a => a.is_breaking).slice(0, 5)
-    setBreakingNews(mockBreaking)
-
     fetch("/api/articles?limit=20")
       .then(r => r.json())
       .then(d => {
         const breaking = (d.articles ?? []).filter((a: Article) => a.is_breaking).slice(0, 5)
-        if (breaking.length > 0) setBreakingNews(breaking)
+        setBreakingNews(breaking)
       })
       .catch(() => {})
   }, [])
 
   if (breakingNews.length === 0) return null
+
   let items = [...breakingNews]
   while (items.length > 0 && items.length < 8) {
     items = [...items, ...breakingNews]

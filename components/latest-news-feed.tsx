@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { ChevronLeft, ChevronRight, Clock, Loader2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { mockArticles, categories, getRelativeTime, getCategoryColor, type Article } from "@/lib/mock-data"
+import { categories, getRelativeTime, getCategoryColor, type Article } from "@/lib/mock-data"
 import { toCdnUrl } from "@/lib/cdn"
 import { useLanguage, getCategoryName } from "@/lib/language-context"
 
@@ -16,18 +16,22 @@ export function LatestNewsFeed() {
   const { t, language } = useLanguage()
   const [activeCategory, setActiveCategory] = useState("All")
   const [currentPage, setCurrentPage] = useState(1)
-  const [articles, setArticles] = useState<Article[]>(mockArticles)
+  const [articles, setArticles] = useState<Article[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetch("/api/articles?limit=100")
       .then(r => r.json())
-      .then(d => { if (d.articles?.length) setArticles(d.articles) })
-      .catch(() => {})
+      .then(d => {
+        setArticles(d.articles ?? [])
+      })
+      .catch(() => setArticles([]))
+      .finally(() => setLoading(false))
   }, [])
 
   const filteredArticles = activeCategory === "All"
     ? articles
-    : articles.filter(a => a.category === activeCategory)
+    : articles.filter(a => a.category?.toLowerCase() === activeCategory.toLowerCase())
 
   const totalPages = Math.ceil(filteredArticles.length / ARTICLES_PER_PAGE)
   const startIndex = (currentPage - 1) * ARTICLES_PER_PAGE
@@ -53,47 +57,54 @@ export function LatestNewsFeed() {
         ))}
       </div>
 
-      {paginatedArticles.length === 0 ? (
-        <p className="text-center py-8 text-muted-foreground">No articles yet.</p>
+      {loading ? (
+        <div className="text-center py-12 text-muted-foreground text-sm">Loading latest news...</div>
+      ) : paginatedArticles.length === 0 ? (
+        <div className="text-center py-12 px-4 rounded-xl border border-dashed border-border bg-card/50">
+          <Clock className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-50" />
+          <p className="text-sm font-semibold text-foreground">No published stories in this section</p>
+          <p className="text-xs text-muted-foreground mt-1">Check back soon for the latest reports and breaking news.</p>
+        </div>
       ) : (
         <Card>
           <CardContent className="divide-y divide-border p-0">
             {paginatedArticles.map(article => (
-              <Link
-                key={article.id}
-                href={`/article/${article.id}`}
-                className="flex gap-4 p-4 group hover:bg-muted/40 transition-colors"
-              >
-                <div className="relative w-24 h-20 shrink-0 rounded-lg overflow-hidden">
-                  <Image
-                    src={toCdnUrl(article.image_url)}
-                    alt={article.title}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                </div>
+              <div key={article.id} className="p-4 flex gap-4 hover:bg-muted/50 transition-colors">
+                {article.image_url && (
+                  <div className="relative w-24 h-24 md:w-32 md:h-24 shrink-0 rounded-lg overflow-hidden bg-muted">
+                    <Image src={toCdnUrl(article.image_url)} alt={article.title} fill className="object-cover" />
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className={`px-2 py-0.5 rounded text-xs font-bold text-white ${getCategoryColor(article.category)}`}>{article.category}</span>
+                    <span className={`px-2 py-0.5 rounded text-xs font-bold text-white ${getCategoryColor(article.category)}`}>
+                      {article.category}
+                    </span>
                     {article.is_breaking && <span className="px-2 py-0.5 bg-[#CE1126] text-white text-xs font-bold rounded">BREAKING</span>}
+                    <span className="text-muted-foreground text-xs">{getRelativeTime(article.published_at)}</span>
                   </div>
-                  <h3 className="font-medium text-sm text-foreground group-hover:text-[#002D72] transition-colors line-clamp-2 mb-1">{article.title}</h3>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{article.reading_time} min</span>
-                    <span>{getRelativeTime(article.published_at)}</span>
-                  </div>
+                  <Link href={`/article/${article.id}`}>
+                    <h3 className="font-serif font-bold text-sm md:text-base leading-snug hover:text-[#002D72] dark:hover:text-[#FCD116] transition-colors line-clamp-2 mb-1">
+                      {article.title}
+                    </h3>
+                  </Link>
+                  <p className="text-muted-foreground text-xs line-clamp-2 hidden sm:block">{article.excerpt}</p>
                 </div>
-              </Link>
+              </div>
             ))}
           </CardContent>
         </Card>
       )}
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-6">
-          <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1,p-1))} disabled={currentPage===1}><ChevronLeft className="h-4 w-4" /></Button>
-          <span className="text-sm text-muted-foreground">Page {currentPage} of {totalPages}</span>
-          <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(totalPages,p+1))} disabled={currentPage===totalPages}><ChevronRight className="h-4 w-4" /></Button>
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <Button size="sm" variant="outline" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+            <ChevronLeft className="h-4 w-4" /> Previous
+          </Button>
+          <span className="text-xs text-muted-foreground">Page {currentPage} of {totalPages}</span>
+          <Button size="sm" variant="outline" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+            Next <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
       )}
     </section>

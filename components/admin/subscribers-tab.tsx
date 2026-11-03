@@ -7,7 +7,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { mockArticles } from "@/lib/mock-data"
+import { type Article } from "@/lib/mock-data"
 
 interface Subscriber {
   email: string
@@ -20,11 +20,24 @@ interface Subscriber {
 type NotifyStatus = "idle" | "loading" | "success" | "error"
 type FetchStatus = "loading" | "done" | "error"
 
-export function SubscribersTab({ adminSecret }: { adminSecret: string }) {
+export function SubscribersTab({ adminSecret }: { adminSecret?: string }) {
   const [subscribers, setSubscribers] = useState<Subscriber[]>([])
   const [fetchStatus, setFetchStatus] = useState<FetchStatus>("loading")
 
-  const [selectedArticleId, setSelectedArticleId] = useState<string>(mockArticles[0]?.id ?? "")
+  const [articles, setArticles] = useState<Article[]>([])
+  const [selectedArticleId, setSelectedArticleId] = useState<string>("")
+
+  useEffect(() => {
+    fetch("/api/articles?limit=50")
+      .then(r => r.json())
+      .then(d => {
+        if (d.articles?.length) {
+          setArticles(d.articles)
+          setSelectedArticleId(d.articles[0].id)
+        }
+      })
+      .catch(() => {})
+  }, [])
   const [notifyStatus, setNotifyStatus] = useState<NotifyStatus>("idle")
   const [notifyMessage, setNotifyMessage] = useState("")
 
@@ -46,7 +59,7 @@ export function SubscribersTab({ adminSecret }: { adminSecret: string }) {
 
   // ── Notify ──────────────────────────────────────────────────────────────────
   const handleNotify = async () => {
-    const article = mockArticles.find((a) => a.id === selectedArticleId)
+    const article = articles.find((a) => a.id === selectedArticleId)
     if (!article) return
     setNotifyStatus("loading")
     setNotifyMessage("")
@@ -168,7 +181,7 @@ export function SubscribersTab({ adminSecret }: { adminSecret: string }) {
               disabled={notifyStatus === "loading"}
               className="w-full appearance-none rounded-lg border border-input bg-background px-4 py-3 pr-10 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#002D72] disabled:opacity-50 cursor-pointer"
             >
-              {mockArticles.map((a) => (
+              {articles.map((a) => (
                 <option key={a.id} value={a.id}>[{a.category}] {a.title}</option>
               ))}
             </select>
@@ -176,7 +189,7 @@ export function SubscribersTab({ adminSecret }: { adminSecret: string }) {
           </div>
 
           {selectedArticleId && (() => {
-            const a = mockArticles.find((x) => x.id === selectedArticleId)
+            const a = articles.find((x) => x.id === selectedArticleId)
             if (!a) return null
             return (
               <div className="rounded-lg bg-muted/50 p-3 text-sm space-y-1">

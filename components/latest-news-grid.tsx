@@ -1,20 +1,39 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ArticleCard } from "@/components/article-card"
-import { mockArticles, categories } from "@/lib/mock-data"
+import { categories, type Article } from "@/lib/mock-data"
 
 const ARTICLES_PER_PAGE = 9
 
 export function LatestNewsGrid() {
   const [activeCategory, setActiveCategory] = useState("All")
   const [currentPage, setCurrentPage] = useState(1)
+  const [articles, setArticles] = useState<Article[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadArticles() {
+      try {
+        const res = await fetch("/api/articles?limit=50")
+        if (res.ok) {
+          const data = await res.json()
+          setArticles(data.articles || [])
+        }
+      } catch (err) {
+        console.error("Failed to load articles:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadArticles()
+  }, [])
 
   const filteredArticles = activeCategory === "All" 
-    ? mockArticles 
-    : mockArticles.filter(article => article.category === activeCategory)
+    ? articles 
+    : articles.filter(article => article.category === activeCategory)
 
   const totalPages = Math.ceil(filteredArticles.length / ARTICLES_PER_PAGE)
   const startIndex = (currentPage - 1) * ARTICLES_PER_PAGE
@@ -55,11 +74,19 @@ export function LatestNewsGrid() {
       </div>
 
       {/* Articles Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {paginatedArticles.map((article) => (
-          <ArticleCard key={article.id} article={article} />
-        ))}
-      </div>
+      {loading ? (
+        <div className="py-12 text-center text-sm text-muted-foreground">Loading published news...</div>
+      ) : paginatedArticles.length === 0 ? (
+        <div className="py-12 text-center border border-dashed rounded-lg text-sm text-muted-foreground">
+          No published stories found in this category.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {paginatedArticles.map((article) => (
+            <ArticleCard key={article.id} article={article} />
+          ))}
+        </div>
+      )}
 
       {/* Pagination */}
       {totalPages > 1 && (

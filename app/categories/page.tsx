@@ -1,3 +1,5 @@
+export const runtime = 'edge'
+
 import Link from "next/link"
 import { ChevronRight } from "lucide-react"
 import { Header } from "@/components/header"
@@ -5,14 +7,30 @@ import { Footer } from "@/components/footer"
 import { BackToTop } from "@/components/back-to-top"
 import { MobileBottomNav } from "@/components/mobile-bottom-nav"
 import { Card, CardContent } from "@/components/ui/card"
-import { categories, mockArticles } from "@/lib/mock-data"
+import { categories } from "@/lib/mock-data"
+import { db } from "@/lib/db"
 
 export const metadata = {
   title: "Categories - The Insider News Philippines",
   description: "Browse all news categories on The Insider News Philippines. Post. Share. Stay Informed.",
 }
 
-export default function CategoriesPage() {
+export default async function CategoriesPage() {
+  let countsMap: Record<string, number> = {}
+  try {
+    const rows = await db.query(
+      `SELECT LOWER(category) as category, COUNT(*)::int as count 
+       FROM articles 
+       WHERE status = 'published' AND published_at <= NOW()
+       GROUP BY LOWER(category)`
+    )
+    for (const r of rows ?? []) {
+      countsMap[r.category] = Number(r.count)
+    }
+  } catch (err) {
+    console.error("[Categories Page] Error fetching category counts:", err)
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -24,9 +42,7 @@ export default function CategoriesPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {categories.map((category) => {
-            const articleCount = mockArticles.filter(
-              a => a.category === category.name
-            ).length
+            const articleCount = countsMap[category.name.toLowerCase()] ?? 0
 
             return (
               <Link key={category.name} href={`/category/${category.name.toLowerCase()}`}>

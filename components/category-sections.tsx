@@ -4,22 +4,24 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { ChevronRight } from "lucide-react"
 import { ArticleCard } from "@/components/article-card"
-import { mockArticles, categories, getCategoryColor, type Article } from "@/lib/mock-data"
+import { categories, type Article } from "@/lib/mock-data"
 
 export function CategorySections() {
-  const [articles, setArticles] = useState<Article[]>(mockArticles)
+  const [articles, setArticles] = useState<Article[]>([])
 
   useEffect(() => {
     fetch("/api/articles?limit=100")
       .then(r => r.json())
-      .then(d => { if (d.articles?.length) setArticles(d.articles) })
-      .catch(() => {})
+      .then(d => {
+        setArticles(d.articles ?? [])
+      })
+      .catch(() => setArticles([]))
   }, [])
 
   return (
     <div className="space-y-8 py-6">
       {categories.slice(0, 4).map(category => {
-        const categoryArticles = articles.filter(a => a.category === category.name).slice(0, 3)
+        const categoryArticles = articles.filter(a => a.category?.toLowerCase() === category.name.toLowerCase()).slice(0, 3)
         if (categoryArticles.length === 0) return null
         return (
           <section key={category.name}>
