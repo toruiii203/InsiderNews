@@ -7,6 +7,7 @@ import { MobileBottomNav } from "@/components/mobile-bottom-nav"
 import { Card, CardContent } from "@/components/ui/card"
 import { supabase } from "@/lib/supabase"
 import { getCategoryColor, getRelativeTime, type Video } from "@/lib/mock-data"
+import { toCdnUrl } from "@/lib/cdn"
 
 export const metadata = {
   title: "Videos - The Insider News Philippines",
@@ -49,10 +50,10 @@ export default async function VideosPage() {
             {videos.map((video) => (
               <Card key={video.id} className="group overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
                 <CardContent className="p-0">
-                  <a href={video.video_url} target="_blank" rel="noopener noreferrer">
+                  <a href={toCdnUrl(video.video_url)} target="_blank" rel="noopener noreferrer">
                     <div className="relative h-48 overflow-hidden">
                       <Image
-                        src={video.thumbnail_url}
+                        src={toCdnUrl(video.thumbnail_url)}
                         alt={video.title}
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-500"

@@ -6,6 +6,8 @@ import { Plus, Edit, Trash2, Eye, Search, X, Calendar, Clock, Zap, Timer, Loader
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { categories, type Article } from "@/lib/mock-data"
+import { toCdnUrl } from "@/lib/cdn"
+import { compressImage } from "@/lib/compress-image"
 
 
 
@@ -88,18 +90,19 @@ function MediaUploadField({ value, onChange, label, adminSecret }: {
     setUploading(true)
     setUploadError("")
     try {
-      const ext = file.name.split(".").pop()
+      const prepared = await compressImage(file)
+      const ext = prepared.contentType === "image/webp" ? "webp" : (file.name.split(".").pop() || "bin")
       const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-      const bucket = file.type.startsWith("video/") ? "videos" : "images"
+      const bucket = prepared.contentType.startsWith("video/") ? "videos" : "images"
       const res = await fetch(`/api/upload`, {
         method: "POST",
         headers: {
           
           "x-filename": filename,
           "x-bucket": bucket,
-          "Content-Type": file.type,
+          "Content-Type": prepared.contentType,
         },
-        body: file,
+        body: prepared.blob,
       })
       if (!res.ok) {
         setUploadError(`Upload failed (${res.status}). Please check storage settings.`)
@@ -159,8 +162,8 @@ function MediaUploadField({ value, onChange, label, adminSecret }: {
       {value && !uploading && (
         <div className="relative rounded-lg overflow-hidden bg-muted h-32">
           {value.match(/\.(mp4|webm|mov)/i)
-            ? <video src={value} className="w-full h-full object-cover" muted />
-            : <Image src={value} alt="Preview" fill className="object-cover" unoptimized />}
+            ? <video src={toCdnUrl(value)} className="w-full h-full object-cover" muted />
+            : <Image src={toCdnUrl(value)} alt="Preview" fill className="object-cover" unoptimized />}
           <button type="button" onClick={() => onChange("")}
             className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 hover:bg-black/80">
             <X className="h-3.5 w-3.5" />
@@ -295,7 +298,7 @@ export function ArticlesTab({ adminSecret }: { adminSecret: string }) {
                 return (
                   <div key={article.id} className="flex items-center gap-4 p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
                     <div className="relative w-20 h-14 shrink-0 rounded overflow-hidden bg-muted">
-                      {article.image_url && <Image src={article.image_url} alt={article.title} fill className="object-cover" />}
+                      {article.image_url && <Image src={toCdnUrl(article.image_url)} alt={article.title} fill className="object-cover" />}
                     </div>
                     <div className="min-w-0 flex-1">
                       <h3 className="font-medium text-sm truncate">{article.title}</h3>

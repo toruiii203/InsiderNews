@@ -6,6 +6,7 @@ import Link from "next/link"
 import { TrendingUp, Eye, Flame } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useLanguage } from "@/lib/language-context"
+import { toCdnUrl } from "@/lib/cdn"
 
 type Article = {
   id: string
@@ -179,7 +180,7 @@ export function SidebarContent() {
               <Link key={article.id} href={`/article/${article.id}`} className="flex gap-3 group">
                 <div className="relative w-16 h-12 flex-shrink-0 rounded overflow-hidden">
                   <Image
-                    src={article.image_url}
+                    src={toCdnUrl(article.image_url)}
                     alt={article.title}
                     fill
                     className="object-cover group-hover:scale-105 transition-transform"

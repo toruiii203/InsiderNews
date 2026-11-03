@@ -6,6 +6,7 @@ import Link from "next/link"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { mockArticles, getRelativeTime, getCategoryColor, type Article } from "@/lib/mock-data"
+import { toCdnUrl } from "@/lib/cdn"
 
 export function HeroCarousel() {
   const [currentSlide, setCurrentSlide] = useState(0)
@@ -37,7 +38,7 @@ export function HeroCarousel() {
   return (
     <div className="relative rounded-xl overflow-hidden bg-gray-900 aspect-[16/9] md:aspect-[2/1]">
       <div className="absolute inset-0">
-        <Image src={article.image_url} alt={article.title} fill className="object-cover opacity-70" priority />
+        <Image src={toCdnUrl(article.image_url)} alt={article.title} fill className="object-cover opacity-70" priority />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
       </div>
       <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6">

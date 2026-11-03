@@ -10,8 +10,6 @@ const ALLOWED_TYPES: Record<string, string> = {
   "video/mp4": "mp4", "video/webm": "webm", "video/quicktime": "mov",
 }
 
-
-
 export async function POST(req: NextRequest) {
   const ADMIN_SECRET = process.env.ADMIN_SECRET ?? ""
   const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""
@@ -25,7 +23,8 @@ export async function POST(req: NextRequest) {
   const bucket = req.headers.get("x-bucket") ?? "images"
   const filenameHeader = req.headers.get("x-filename") ?? ""
   const isVideo = contentType.startsWith("video/")
-  const maxBytes = isVideo ? 200 * 1024 * 1024 : 10 * 1024 * 1024
+  // Video limit: 200 MB (YouTube/Facebook links are preferred to save storage and egress)
+  const maxBytes = isVideo ? 200 * 1024 * 1024 : 5 * 1024 * 1024
 
   const buffer = await req.arrayBuffer()
   if (buffer.byteLength > maxBytes) return NextResponse.json({ error: `File too large.` }, { status: 413 })
@@ -34,9 +33,13 @@ export async function POST(req: NextRequest) {
   const filename = filenameHeader || `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
 
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
-  const { data, error } = await supabase.storage.from(bucket).upload(filename, buffer, { contentType, upsert: false })
+  const { data, error } = await supabase.storage.from(bucket).upload(filename, buffer, {
+    contentType,
+    upsert: false,
+    cacheControl: "31536000",
+  })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(data.path)
-  return NextResponse.json({ url: urlData.publicUrl }, { status: 201 })
+  const cdnUrl = `https://img.theinsidernewsph.com/${bucket}/${data.path}`
+  return NextResponse.json({ url: cdnUrl }, { status: 201 })
 }

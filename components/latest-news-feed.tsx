@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, Clock, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { mockArticles, categories, getRelativeTime, getCategoryColor, type Article } from "@/lib/mock-data"
+import { toCdnUrl } from "@/lib/cdn"
 import { useLanguage, getCategoryName } from "@/lib/language-context"
 
 const ARTICLES_PER_PAGE = 8
@@ -65,7 +66,7 @@ export function LatestNewsFeed() {
               >
                 <div className="relative w-24 h-20 shrink-0 rounded-lg overflow-hidden">
                   <Image
-                    src={article.image_url}
+                    src={toCdnUrl(article.image_url)}
                     alt={article.title}
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-300"

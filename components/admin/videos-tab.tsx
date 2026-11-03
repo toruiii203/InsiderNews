@@ -9,6 +9,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { categories, type Video } from "@/lib/mock-data"
+import { toCdnUrl } from "@/lib/cdn"
+import { compressImage } from "@/lib/compress-image"
 
 
 
@@ -54,18 +56,19 @@ function MediaUploadField({ value, onChange, label, kind = "video", adminSecret 
     setUploading(true)
     setUploadError("")
     try {
-      const ext = file.name.split(".").pop()
+      const prepared = await compressImage(file)
+      const ext = prepared.contentType === "image/webp" ? "webp" : (file.name.split(".").pop() || "bin")
       const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-      const bucket = file.type.startsWith("video/") ? "videos" : "images"
+      const bucket = prepared.contentType.startsWith("video/") ? "videos" : "images"
       const res = await fetch(`/api/upload`, {
         method: "POST",
         headers: {
           
           "x-filename": filename,
           "x-bucket": bucket,
-          "Content-Type": file.type,
+          "Content-Type": prepared.contentType,
         },
-        body: file,
+        body: prepared.blob,
       })
       if (!res.ok) {
         setUploadError(`Upload failed (${res.status}). Please check storage settings.`)
@@ -129,9 +132,9 @@ function MediaUploadField({ value, onChange, label, kind = "video", adminSecret 
       {value && !uploading && (
         <div className="relative rounded-lg overflow-hidden bg-muted h-32">
           {isVideoValue
-            ? <video src={value} className="w-full h-full object-cover" muted controls />
+            ? <video src={toCdnUrl(value)} className="w-full h-full object-cover" muted controls />
             : isImageValue
-              ? <Image src={value} alt="Preview" fill className="object-cover" unoptimized />
+              ? <Image src={toCdnUrl(value)} alt="Preview" fill className="object-cover" unoptimized />
               : <div className="flex items-center justify-center h-full text-xs text-muted-foreground px-2 text-center">{value}</div>}
           <button type="button" onClick={() => onChange("")}
             className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 hover:bg-black/80">
@@ -249,7 +252,7 @@ export function VideosTab({ adminSecret }: { adminSecret: string }) {
               <CardContent className="p-0">
                 <div className="relative h-40">
                   <Image
-                    src={video.thumbnail_url}
+                    src={toCdnUrl(video.thumbnail_url)}
                     alt={video.title}
                     fill
                     className="object-cover"

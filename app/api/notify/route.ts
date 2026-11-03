@@ -3,6 +3,7 @@ export const runtime = 'edge'
 import { NextRequest, NextResponse } from "next/server"
 import { verifySession } from "@/lib/session"
 import { supabaseAdmin } from "@/lib/supabase"
+import { toCdnUrl } from "@/lib/cdn"
 
 interface Article {
   id: string; title: string; excerpt: string; category: string; author: string; image_url?: string
@@ -11,7 +12,7 @@ interface Article {
 function buildEmailHtml(article: Article, baseUrl: string) {
   const articleUrl = `${baseUrl}/article/${article.id}`
   const imageBlock = article.image_url
-    ? `<img src="${article.image_url}" alt="" style="width:100%;max-width:600px;height:220px;object-fit:cover;border-radius:8px;margin-bottom:20px;" />`
+    ? `<img src="${toCdnUrl(article.image_url)}" alt="" style="width:100%;max-width:600px;height:220px;object-fit:cover;border-radius:8px;margin-bottom:20px;" />`
     : ""
   return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/></head>
 <body style="margin:0;padding:0;background:#f4f4f5;font-family:Georgia,serif;">

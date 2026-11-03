@@ -8,6 +8,7 @@ import { Footer } from "@/components/footer"
 import { BackToTop } from "@/components/back-to-top"
 import { MobileBottomNav } from "@/components/mobile-bottom-nav"
 import { supabaseAdmin } from "@/lib/supabase"
+import { toCdnUrl } from "@/lib/cdn"
 
 interface AboutContent {
   id: number
@@ -86,7 +87,7 @@ export default async function AboutPage() {
                 <div key={member.id} className="flex flex-col items-center text-center p-6 rounded-xl border border-border bg-card">
                   <div className="relative w-24 h-24 rounded-full overflow-hidden bg-muted mb-4">
                     {member.photo_url ? (
-                      <Image src={member.photo_url} alt={member.name} fill className="object-cover" />
+                      <Image src={toCdnUrl(member.photo_url)} alt={member.name} fill className="object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-[#002D72] text-white text-2xl font-bold">
                         {member.name[0]?.toUpperCase()}

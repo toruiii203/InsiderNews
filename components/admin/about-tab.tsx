@@ -8,6 +8,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { toCdnUrl } from "@/lib/cdn"
 
 
 
@@ -187,7 +188,7 @@ function StaffManager({ adminSecret }: { adminSecret: string }) {
               <div key={member.id} className="flex items-center gap-4 p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
                 <div className="relative w-14 h-14 shrink-0 rounded-full overflow-hidden bg-muted">
                   {member.photo_url ? (
-                    <Image src={member.photo_url} alt={member.name} fill className="object-cover" />
+                    <Image src={toCdnUrl(member.photo_url)} alt={member.name} fill className="object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-[#002D72] text-white font-bold">
                       {member.name[0]?.toUpperCase()}

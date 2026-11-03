@@ -52,3 +52,12 @@ Additional accounts added via the admin panel are still stored in localStorage
 **Default credentials:**
 - Username: `admin`
 - Password: value of `NEXT_PUBLIC_ADMIN_SECRET` (set in Cloudflare env vars)
+
+## Storage & CDN Proxy (img.theinsidernewsph.com)
+
+To cut Supabase storage egress and stay within quota limits:
+- A Cloudflare Worker proxy (`news-img-proxy`) runs at `https://img.theinsidernewsph.com/`.
+- It maps `https://img.theinsidernewsph.com/<bucket>/<path>` to Supabase storage public buckets and caches media for 30 days at the edge.
+- New uploads via `/api/upload` automatically return CDN URLs (`https://img.theinsidernewsph.com/...`) with `cacheControl: "31536000"`.
+- Client-side helper `toCdnUrl` (in `lib/cdn.ts`) transforms stored Supabase storage public URLs into CDN URLs at render/use time without altering the database.
+- Images uploaded through the admin panel are automatically downscaled (max 1600px) and compressed to WebP (~0.82 quality) before upload.

@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { WeatherWidget } from "@/components/weather-widget"
 import { ArticleCard } from "@/components/article-card"
 import { mockArticles, getRelativeTime } from "@/lib/mock-data"
+import { toCdnUrl } from "@/lib/cdn"
 
 export function NewsSidebar() {
   const trendingArticles = mockArticles.slice(0, 7)
@@ -76,7 +77,7 @@ export function NewsSidebar() {
           <Link href={`/article/${photoOfTheDay.id}`}>
             <div className="relative h-48 group">
               <Image
-                src={photoOfTheDay.image_url}
+                src={toCdnUrl(photoOfTheDay.image_url)}
                 alt={photoOfTheDay.title}
                 fill
                 className="object-cover group-hover:scale-105 transition-transform duration-500"

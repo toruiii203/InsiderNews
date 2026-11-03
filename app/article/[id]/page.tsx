@@ -16,6 +16,7 @@ import { ViewTracker } from "@/components/view-tracker"
 import { Button } from "@/components/ui/button"
 import { getCategoryColor, getRelativeTime, type Article } from "@/lib/mock-data"
 import { supabaseAdmin } from "@/lib/supabase"
+import { toCdnUrl } from "@/lib/cdn"
 
 interface ArticlePageProps {
   params: Promise<{ id: string }>
@@ -96,7 +97,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
         title: article.title ?? "Untitled",
         description: article.excerpt ?? "",
         type: "article",
-        images: article.image_url ? [article.image_url] : [],
+        images: article.image_url ? [toCdnUrl(article.image_url)] : [],
         publishedTime: article.published_at,
         authors: article.author ? [article.author] : [],
       },
@@ -104,7 +105,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
         card: "summary_large_image",
         title: article.title ?? "Untitled",
         description: article.excerpt ?? "",
-        images: article.image_url ? [article.image_url] : [],
+        images: article.image_url ? [toCdnUrl(article.image_url)] : [],
       },
     }
   } catch (err) {
@@ -125,7 +126,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     "@type": "NewsArticle",
     headline: article.title ?? "",
     description: article.excerpt ?? "",
-    image: article.image_url ?? "",
+    image: toCdnUrl(article.image_url),
     datePublished: article.published_at ?? "",
     author: { "@type": "Person", name: article.author ?? "Unknown" },
     publisher: { "@type": "Organization", name: "The Insider News Philippines" },
@@ -186,7 +187,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
         {article.image_url && (
           <div className="relative w-full h-64 md:h-96 rounded-xl overflow-hidden mb-8">
-            <Image src={article.image_url} alt={article.title ?? "Article image"} fill className="object-cover" priority />
+            <Image src={toCdnUrl(article.image_url)} alt={article.title ?? "Article image"} fill className="object-cover" priority />
           </div>
         )}
 

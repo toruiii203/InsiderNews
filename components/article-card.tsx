@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Eye, Clock } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { type Article, getRelativeTime, getCategoryColor } from "@/lib/mock-data"
+import { toCdnUrl } from "@/lib/cdn"
 
 interface ArticleCardProps {
   article: Article
@@ -19,7 +20,7 @@ export function ArticleCard({ article, variant = "default" }: ArticleCardProps) 
           <CardContent className="p-0 flex gap-3">
             <div className="relative w-24 h-24 shrink-0 overflow-hidden rounded-lg">
               <Image
-                src={article.image_url}
+                src={toCdnUrl(article.image_url)}
                 alt={article.title}
                 fill
                 className="object-cover group-hover:scale-105 transition-transform duration-300"
@@ -49,7 +50,7 @@ export function ArticleCard({ article, variant = "default" }: ArticleCardProps) 
           <CardContent className="p-0">
             <div className="relative h-64 overflow-hidden">
               <Image
-                src={article.image_url}
+                src={toCdnUrl(article.image_url)}
                 alt={article.title}
                 fill
                 className="object-cover group-hover:scale-105 transition-transform duration-500"
@@ -76,7 +77,7 @@ export function ArticleCard({ article, variant = "default" }: ArticleCardProps) 
         <CardContent className="p-0">
           <div className="relative h-48 overflow-hidden">
             <Image
-              src={article.image_url}
+              src={toCdnUrl(article.image_url)}
               alt={article.title}
               fill
               className="object-cover group-hover:scale-105 transition-transform duration-500"
