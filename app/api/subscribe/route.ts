@@ -2,7 +2,7 @@ export const runtime = 'edge'
 
 import { NextRequest, NextResponse } from "next/server"
 import { verifySession } from "@/lib/session"
-import { supabaseAdmin } from "@/lib/supabase"
+import { db } from "@/lib/db"
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
@@ -16,15 +16,16 @@ export async function POST(req: NextRequest) {
     }
     const normalised = email.toLowerCase().trim()
 
-    const { error } = await supabaseAdmin
-      .from("subscribers")
-      .insert({ email: normalised, confirmed: false })
-
-    if (error) {
-      if (error.code === "23505") {
+    try {
+      await db.query(
+        `INSERT INTO subscribers (email, confirmed) VALUES ($1, $2)`,
+        [normalised, false]
+      )
+    } catch (dbErr: any) {
+      if (dbErr.code === "23505" || dbErr.message?.includes("unique")) {
         return NextResponse.json({ error: "This email is already subscribed." }, { status: 409 })
       }
-      throw error
+      throw dbErr
     }
 
     return NextResponse.json({ success: true, message: "Subscribed successfully!" }, { status: 201 })
@@ -37,27 +38,31 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   if (!await verifySession()) return NextResponse.json({ error: "Unauthorised" }, { status: 401 })
 
-  const { data, error } = await supabaseAdmin
-    .from("subscribers")
-    .select("*")
-    .order("created_at", { ascending: false })
+  try {
+    const rows = await db.query(
+      `SELECT * FROM subscribers ORDER BY created_at DESC`
+    )
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-  return NextResponse.json({
-    count: data.length,
-    subscribers: data.map(s => ({
-      email: s.email,
-      subscribedAt: s.created_at,
-      confirmed: s.confirmed,
-    })),
-  })
+    return NextResponse.json({
+      count: rows.length,
+      subscribers: rows.map((s: any) => ({
+        email: s.email,
+        subscribedAt: s.created_at,
+        confirmed: s.confirmed,
+      })),
+    })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
 }
 
 export async function DELETE(req: NextRequest) {
   if (!await verifySession()) return NextResponse.json({ error: "Unauthorised" }, { status: 401 })
-  const { email } = await req.json()
-  const { error } = await supabaseAdmin.from("subscribers").delete().eq("email", email)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ success: true })
+  try {
+    const { email } = await req.json()
+    await db.query(`DELETE FROM subscribers WHERE email = $1`, [email])
+    return NextResponse.json({ success: true })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
 }

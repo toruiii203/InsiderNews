@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic"
 
 import { NextRequest, NextResponse } from "next/server"
 import { verifySession } from "@/lib/session"
-import { createClient } from "@supabase/supabase-js"
+import { uploadToR2 } from "@/lib/r2"
 
 const ALLOWED_TYPES: Record<string, string> = {
   "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif",
@@ -11,10 +11,6 @@ const ALLOWED_TYPES: Record<string, string> = {
 }
 
 export async function POST(req: NextRequest) {
-  const ADMIN_SECRET = process.env.ADMIN_SECRET ?? ""
-  const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""
-  const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ""
-
   if (!await verifySession()) return NextResponse.json({ error: "Unauthorised" }, { status: 401 })
 
   const contentType = req.headers.get("content-type") ?? ""
@@ -32,14 +28,17 @@ export async function POST(req: NextRequest) {
   const ext = ALLOWED_TYPES[contentType]
   const filename = filenameHeader || `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
 
-  const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
-  const { data, error } = await supabase.storage.from(bucket).upload(filename, buffer, {
+  const result = await uploadToR2({
+    bucket,
+    key: filename,
+    buffer,
     contentType,
-    upsert: false,
-    cacheControl: "31536000",
+    cacheControl: "max-age=31536000, public",
   })
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const cdnUrl = `https://img.theinsidernewsph.com/${bucket}/${data.path}`
-  return NextResponse.json({ url: cdnUrl }, { status: 201 })
+  if (!result.success) {
+    return NextResponse.json({ error: result.error || "Upload failed" }, { status: 500 })
+  }
+
+  return NextResponse.json({ url: result.url }, { status: 201 })
 }

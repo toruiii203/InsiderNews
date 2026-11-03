@@ -5,7 +5,7 @@ import { Footer } from "@/components/footer"
 import { BackToTop } from "@/components/back-to-top"
 import { MobileBottomNav } from "@/components/mobile-bottom-nav"
 import { Card, CardContent } from "@/components/ui/card"
-import { supabase } from "@/lib/supabase"
+import { query } from "@/lib/db"
 import { getCategoryColor, getRelativeTime, type Video } from "@/lib/mock-data"
 import { toCdnUrl } from "@/lib/cdn"
 
@@ -18,17 +18,12 @@ export const metadata = {
 export const revalidate = 60
 
 async function getVideos(): Promise<Video[]> {
-  const { data, error } = await supabase
-    .from("videos")
-    .select("*")
-    .order("published_at", { ascending: false })
-
-  if (error) {
-    console.error("Failed to load videos:", error.message)
+  try {
+    return await query<Video>("SELECT * FROM videos ORDER BY published_at DESC;")
+  } catch (err: any) {
+    console.error("Failed to load videos:", err.message)
     return []
   }
-
-  return data ?? []
 }
 
 export default async function VideosPage() {

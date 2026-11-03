@@ -2,59 +2,102 @@ export const runtime = 'edge'
 
 import { NextRequest, NextResponse } from "next/server"
 import { verifySession } from "@/lib/session"
-import { supabaseAdmin } from "@/lib/supabase"
+import { query, queryOne } from "@/lib/db"
 
 export async function GET() {
-  const { data, error } = await supabaseAdmin
-    .from("staff")
-    .select("*")
-    .order("display_order", { ascending: true })
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ staff: data ?? [] })
+  try {
+    const staff = await query("SELECT * FROM staff ORDER BY display_order ASC;")
+    return NextResponse.json({ staff })
+  } catch (err: any) {
+    console.error("[API Staff GET] Error:", err)
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
 }
 
 export async function POST(req: NextRequest) {
-  if (!await verifySession()) return NextResponse.json({ error: "Unauthorised" }, { status: 401 })
+  try {
+    if (!await verifySession()) return NextResponse.json({ error: "Unauthorised" }, { status: 401 })
 
-  const body = await req.json()
-  const { data, error } = await supabaseAdmin
-    .from("staff")
-    .insert({
-      name: body.name,
-      role: body.role,
-      bio: body.bio ?? "",
-      photo_url: body.photo_url ?? "",
-      email: body.email ?? "",
-      display_order: body.display_order ?? 0,
-    })
-    .select().single()
+    const body = await req.json()
+    const staff = await queryOne(
+      `
+      INSERT INTO staff (name, role, bio, photo_url, email, display_order)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *;
+      `,
+      [
+        body.name,
+        body.role,
+        body.bio ?? "",
+        body.photo_url ?? "",
+        body.email ?? "",
+        body.display_order ?? 0,
+      ]
+    )
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ staff: data }, { status: 201 })
+    return NextResponse.json({ staff }, { status: 201 })
+  } catch (err: any) {
+    console.error("[API Staff POST] Error:", err)
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
 }
 
 export async function PATCH(req: NextRequest) {
-  if (!await verifySession()) return NextResponse.json({ error: "Unauthorised" }, { status: 401 })
+  try {
+    if (!await verifySession()) return NextResponse.json({ error: "Unauthorised" }, { status: 401 })
 
-  const body = await req.json()
-  const { id, ...updates } = body
-  const { data, error } = await supabaseAdmin
-    .from("staff")
-    .update(updates)
-    .eq("id", id)
-    .select().single()
+    const body = await req.json()
+    const { id, ...updates } = body
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ staff: data })
+    if (!id) {
+      return NextResponse.json({ error: "Missing staff id" }, { status: 400 })
+    }
+
+    const setClauses: string[] = []
+    const params: any[] = []
+    let idx = 1
+
+    const allowed = ["name", "role", "bio", "photo_url", "email", "display_order"]
+    for (const key of allowed) {
+      if (updates[key] !== undefined) {
+        setClauses.push(`${key} = $${idx++}`)
+        params.push(updates[key])
+      }
+    }
+
+    if (setClauses.length === 0) {
+      return NextResponse.json({ error: "No fields to update" }, { status: 400 })
+    }
+
+    params.push(id)
+    const sql = `
+      UPDATE staff
+      SET ${setClauses.join(", ")}
+      WHERE id = $${idx}
+      RETURNING *;
+    `
+
+    const staff = await queryOne(sql, params)
+    return NextResponse.json({ staff })
+  } catch (err: any) {
+    console.error("[API Staff PATCH] Error:", err)
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
 }
 
 export async function DELETE(req: NextRequest) {
-  if (!await verifySession()) return NextResponse.json({ error: "Unauthorised" }, { status: 401 })
+  try {
+    if (!await verifySession()) return NextResponse.json({ error: "Unauthorised" }, { status: 401 })
 
-  const { id } = await req.json()
-  const { error } = await supabaseAdmin.from("staff").delete().eq("id", id)
+    const { id } = await req.json()
+    if (!id) {
+      return NextResponse.json({ error: "Missing staff id" }, { status: 400 })
+    }
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ success: true })
+    await query("DELETE FROM staff WHERE id = $1;", [id])
+    return NextResponse.json({ success: true })
+  } catch (err: any) {
+    console.error("[API Staff DELETE] Error:", err)
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
 }

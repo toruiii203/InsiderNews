@@ -15,7 +15,7 @@ import { ShareButtons } from "@/components/share-buttons"
 import { ViewTracker } from "@/components/view-tracker"
 import { Button } from "@/components/ui/button"
 import { getCategoryColor, getRelativeTime, type Article } from "@/lib/mock-data"
-import { supabaseAdmin } from "@/lib/supabase"
+import { query, queryOne } from "@/lib/db"
 import { toCdnUrl } from "@/lib/cdn"
 
 interface ArticlePageProps {
@@ -24,31 +24,29 @@ interface ArticlePageProps {
 
 async function getArticle(id: string): Promise<Article | null> {
   try {
-    const { data, error } = await supabaseAdmin.from("articles").select("*").eq("id", id).single()
-    if (error) {
-      console.error("Error fetching article:", error)
-      return null
-    }
-    return data
+    return await queryOne<Article>("SELECT * FROM articles WHERE id = $1 LIMIT 1;", [id])
   } catch (err) {
-    console.error("Unexpected error fetching article:", err)
+    console.error("Error fetching article:", err)
     return null
   }
 }
 
 async function getRelatedArticles(category: string, excludeId: string): Promise<Article[]> {
   try {
-    const { data, error } = await supabaseAdmin.from("articles").select("*")
-      .eq("category", category).eq("status", "published")
-      .neq("id", excludeId).lte("published_at", new Date().toISOString())
-      .order("published_at", { ascending: false }).limit(3)
-    if (error) {
-      console.error("Error fetching related articles:", error)
-      return []
-    }
-    return data ?? []
+    return await query<Article>(
+      `
+      SELECT * FROM articles
+      WHERE category = $1
+        AND status = 'published'
+        AND id != $2
+        AND published_at <= $3
+      ORDER BY published_at DESC
+      LIMIT 3;
+      `,
+      [category, excludeId, new Date().toISOString()]
+    )
   } catch (err) {
-    console.error("Unexpected error fetching related articles:", err)
+    console.error("Error fetching related articles:", err)
     return []
   }
 }

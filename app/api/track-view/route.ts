@@ -1,11 +1,7 @@
-// app/api/track-view/route.ts
 import { NextRequest, NextResponse } from "next/server"
-import { supabase } from "@/lib/supabase"
+import { db } from "@/lib/db"
 
 export const runtime = "edge"
-
-// Uses the anon key on purpose — RLS only allows inserts, not reads, from this key.
-
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,18 +11,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "articleId is required" }, { status: 400 })
     }
 
-    const { error } = await supabase.from("article_views").insert({
-      article_id: articleId,
-      category: category ?? null,
-      tags: Array.isArray(tags) ? tags : null,
-    })
+    await db.query(
+      `INSERT INTO article_views (article_id, category, tags) VALUES ($1, $2, $3)`,
+      [articleId, category ?? null, Array.isArray(tags) ? tags : null]
+    )
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
+    // Increment article view_count
+    await db.query(
+      `UPDATE articles SET view_count = COALESCE(view_count, 0) + 1 WHERE id = $1`,
+      [articleId]
+    ).catch(() => {})
 
     return NextResponse.json({ ok: true })
-  } catch {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Invalid request" }, { status: 400 })
   }
 }

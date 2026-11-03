@@ -1,116 +1,121 @@
-import { NextResponse } from "next/server"
-import { supabaseAdmin } from "@/lib/supabase"
-
 export const runtime = "edge"
 
-// NOTE: adjust this to whatever /api/articles/route.ts actually checks
-// server-side (likely process.env.ADMIN_SECRET). Checking both here so
-// this works whether you kept one env var or split it into a public +
-// server pair.
-const getAdminSecret = () => process.env.ADMIN_SECRET ?? process.env.NEXT_PUBLIC_ADMIN_SECRET
+import { NextResponse } from "next/server"
+import { verifySession } from "@/lib/session"
+import { query, queryOne } from "@/lib/db"
 
 async function isAuthorized() {
-  return !!(await verifySession());
+  return !!(await verifySession())
 }
 
 // GET /api/videos?limit=100 — list videos, newest first
-// Public endpoint: reads are unauthenticated on purpose so the homepage
-// and other public pages can fetch videos without shipping the admin
-// secret to the browser. Only writes (POST/PATCH/DELETE) require it.
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const limit = Number(searchParams.get("limit")) || 100
+  try {
+    const { searchParams } = new URL(request.url)
+    const limit = Math.min(Math.max(1, Number(searchParams.get("limit")) || 100), 200)
 
-  const { data, error } = await supabaseAdmin
-    .from("videos")
-    .select("*")
-    .order("published_at", { ascending: false })
-    .limit(limit)
+    const videos = await query(
+      "SELECT * FROM videos ORDER BY published_at DESC LIMIT $1;",
+      [limit]
+    )
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ videos })
+  } catch (err: any) {
+    console.error("[API Videos GET] Error:", err)
+    return NextResponse.json({ error: err.message }, { status: 500 })
   }
-
-  return NextResponse.json({ videos: data })
 }
 
 // POST /api/videos — create a new video
 export async function POST(request: Request) {
-  if (!isAuthorized(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  try {
+    if (!await isAuthorized()) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { title, description, video_url, thumbnail_url, category, published_at } = body
+
+    if (!title || !description || !video_url || !thumbnail_url || !category) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+    }
+
+    const video = await queryOne(
+      `
+      INSERT INTO videos (title, description, video_url, thumbnail_url, category, published_at)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *;
+      `,
+      [
+        title,
+        description,
+        video_url,
+        thumbnail_url,
+        category,
+        published_at ?? new Date().toISOString(),
+      ]
+    )
+
+    return NextResponse.json({ video }, { status: 201 })
+  } catch (err: any) {
+    console.error("[API Videos POST] Error:", err)
+    return NextResponse.json({ error: err.message }, { status: 500 })
   }
-
-  const body = await request.json()
-  const { title, description, video_url, thumbnail_url, category, published_at } = body
-
-  if (!title || !description || !video_url || !thumbnail_url || !category) {
-    return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
-  }
-
-  const { data, error } = await supabaseAdmin
-    .from("videos")
-    .insert({
-      title,
-      description,
-      video_url,
-      thumbnail_url,
-      category,
-      published_at: published_at ?? new Date().toISOString(),
-    })
-    .select()
-    .single()
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  return NextResponse.json({ video: data })
 }
 
-// PATCH /api/videos — update a video (id included in body, like /api/articles)
+// PATCH /api/videos — update a video
 export async function PATCH(request: Request) {
-  if (!isAuthorized(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  try {
+    if (!await isAuthorized()) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { id, title, description, video_url, thumbnail_url, category, published_at } = body
+
+    if (!id) {
+      return NextResponse.json({ error: "Missing video id" }, { status: 400 })
+    }
+
+    const video = await queryOne(
+      `
+      UPDATE videos
+      SET title = COALESCE($1, title),
+          description = COALESCE($2, description),
+          video_url = COALESCE($3, video_url),
+          thumbnail_url = COALESCE($4, thumbnail_url),
+          category = COALESCE($5, category),
+          published_at = COALESCE($6, published_at)
+      WHERE id = $7
+      RETURNING *;
+      `,
+      [title, description, video_url, thumbnail_url, category, published_at, id]
+    )
+
+    return NextResponse.json({ video })
+  } catch (err: any) {
+    console.error("[API Videos PATCH] Error:", err)
+    return NextResponse.json({ error: err.message }, { status: 500 })
   }
-
-  const body = await request.json()
-  const { id, title, description, video_url, thumbnail_url, category, published_at } = body
-
-  if (!id) {
-    return NextResponse.json({ error: "Missing video id" }, { status: 400 })
-  }
-
-  const { data, error } = await supabaseAdmin
-    .from("videos")
-    .update({ title, description, video_url, thumbnail_url, category, published_at })
-    .eq("id", id)
-    .select()
-    .single()
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  return NextResponse.json({ video: data })
 }
 
-// DELETE /api/videos — body: { id }
+// DELETE /api/videos — delete a video
 export async function DELETE(request: Request) {
-  if (!isAuthorized(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  try {
+    if (!await isAuthorized()) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { id } = await request.json()
+
+    if (!id) {
+      return NextResponse.json({ error: "Missing video id" }, { status: 400 })
+    }
+
+    await query("DELETE FROM videos WHERE id = $1", [id])
+    return NextResponse.json({ success: true })
+  } catch (err: any) {
+    console.error("[API Videos DELETE] Error:", err)
+    return NextResponse.json({ error: err.message }, { status: 500 })
   }
-
-  const { id } = await request.json()
-
-  if (!id) {
-    return NextResponse.json({ error: "Missing video id" }, { status: 400 })
-  }
-
-  const { error } = await supabaseAdmin.from("videos").delete().eq("id", id)
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  return NextResponse.json({ success: true })
 }

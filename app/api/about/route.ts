@@ -2,34 +2,42 @@ export const runtime = 'edge'
 
 import { NextRequest, NextResponse } from "next/server"
 import { verifySession } from "@/lib/session"
-import { supabaseAdmin } from "@/lib/supabase"
+import { queryOne } from "@/lib/db"
 
 export async function GET() {
-  const { data, error } = await supabaseAdmin
-    .from("about_content")
-    .select("*")
-    .eq("id", 1)
-    .single()
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ about: data })
+  try {
+    const about = await queryOne(
+      "SELECT * FROM about_content WHERE id = 1 LIMIT 1;"
+    )
+    return NextResponse.json({ about })
+  } catch (err: any) {
+    console.error("[API About GET] Error:", err)
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
 }
 
 export async function PATCH(req: NextRequest) {
-  if (!await verifySession()) return NextResponse.json({ error: "Unauthorised" }, { status: 401 })
+  try {
+    if (!await verifySession()) return NextResponse.json({ error: "Unauthorised" }, { status: 401 })
 
-  const body = await req.json()
-  const { data, error } = await supabaseAdmin
-    .from("about_content")
-    .update({
-      heading: body.heading,
-      mission: body.mission,
-      story: body.story,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", 1)
-    .select().single()
+    const body = await req.json()
+    const about = await queryOne(
+      `
+      INSERT INTO about_content (id, heading, mission, story, updated_at)
+      VALUES (1, $1, $2, $3, NOW())
+      ON CONFLICT (id) DO UPDATE SET
+        heading = EXCLUDED.heading,
+        mission = EXCLUDED.mission,
+        story = EXCLUDED.story,
+        updated_at = NOW()
+      RETURNING *;
+      `,
+      [body.heading, body.mission, body.story]
+    )
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ about: data })
+    return NextResponse.json({ about })
+  } catch (err: any) {
+    console.error("[API About PATCH] Error:", err)
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
 }

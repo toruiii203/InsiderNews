@@ -2,7 +2,13 @@ import { jwtVerify, SignJWT } from "jose"
 import { cookies } from "next/headers"
 
 const getKey = () => {
-  const secretKey = process.env.ADMIN_SECRET ?? process.env.NEXT_PUBLIC_ADMIN_SECRET ?? "fallback_secret_for_development"
+  const secretKey = process.env.ADMIN_SECRET
+  if (!secretKey) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("ADMIN_SECRET environment variable is missing in production")
+    }
+    return new TextEncoder().encode("local_dev_secret_only_never_use_in_production")
+  }
   return new TextEncoder().encode(secretKey)
 }
 

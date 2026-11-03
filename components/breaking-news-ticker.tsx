@@ -25,7 +25,10 @@ export function BreakingNewsTicker() {
   }, [])
 
   if (breakingNews.length === 0) return null
-  const items = [...breakingNews, ...breakingNews]
+  let items = [...breakingNews]
+  while (items.length > 0 && items.length < 8) {
+    items = [...items, ...breakingNews]
+  }
 
   return (
     <div className="bg-[#CE1126] text-white py-2 overflow-hidden">
@@ -34,8 +37,8 @@ export function BreakingNewsTicker() {
           <AlertCircle className="h-4 w-4 animate-pulse" />
           <span className="text-xs font-bold uppercase tracking-wide">{language === "FIL" ? "Balita" : "Breaking"}</span>
         </div>
-        <div className="overflow-hidden flex-1 relative group">
-          <div className="flex animate-marquee whitespace-nowrap gap-8 w-max group-hover:[animation-play-state:paused]">
+        <div className="overflow-hidden flex-1 relative">
+          <div className="flex animate-marquee whitespace-nowrap gap-8 w-max">
             {items.map((article, i) => (
               <Link key={`${article.id}-${i}`} href={`/article/${article.id}`}
                 className="text-sm font-medium hover:text-yellow-300 transition-colors shrink-0">

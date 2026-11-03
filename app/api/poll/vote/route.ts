@@ -1,10 +1,7 @@
-// app/api/poll/vote/route.ts
 import { NextRequest, NextResponse } from "next/server"
-import { supabase } from "@/lib/supabase"
+import { db } from "@/lib/db"
 
 export const runtime = "edge"
-
-
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,17 +11,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "pollId and optionId are required" }, { status: 400 })
     }
 
-    const { error } = await supabase.from("poll_votes").insert({
-      poll_id: pollId,
-      option_id: optionId,
-    })
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
+    await db.query(
+      `INSERT INTO poll_votes (poll_id, option_id) VALUES ($1, $2)`,
+      [pollId, optionId]
+    )
 
     return NextResponse.json({ ok: true })
-  } catch {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Invalid request" }, { status: 500 })
   }
 }

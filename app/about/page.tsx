@@ -7,7 +7,7 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { BackToTop } from "@/components/back-to-top"
 import { MobileBottomNav } from "@/components/mobile-bottom-nav"
-import { supabaseAdmin } from "@/lib/supabase"
+import { query, queryOne } from "@/lib/db"
 import { toCdnUrl } from "@/lib/cdn"
 
 interface AboutContent {
@@ -29,9 +29,9 @@ interface StaffMember {
 
 async function getAboutContent(): Promise<AboutContent | null> {
   try {
-    const { data, error } = await supabaseAdmin.from("about_content").select("*").eq("id", 1).single()
-    if (error) return null
-    return data
+    return await queryOne<AboutContent>("SELECT * FROM about_content WHERE id = 1 LIMIT 1;")
+
+
   } catch {
     return null
   }
@@ -39,9 +39,9 @@ async function getAboutContent(): Promise<AboutContent | null> {
 
 async function getStaff(): Promise<StaffMember[]> {
   try {
-    const { data, error } = await supabaseAdmin.from("staff").select("*").order("display_order", { ascending: true })
-    if (error) return []
-    return data ?? []
+    return await query<StaffMember>("SELECT * FROM staff ORDER BY display_order ASC;")
+
+
   } catch {
     return []
   }

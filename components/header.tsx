@@ -22,7 +22,7 @@ export function Header() {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [city, setCity] = useState("Loading...")
-  const [weather, setWeather] = useState("?? --�C")
+  const [weather, setWeather] = useState("--°C")
 
   const [settings, setSettings] = useState<SiteSettings | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
@@ -111,7 +111,7 @@ export function Header() {
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="text-gray-400 font-bold uppercase text-[9px] tracking-widest">Weather</span>
-                <span className="font-bold">☀️ 29.9°C</span>
+                <span className="font-bold">{weather}</span>
               </div>
             </div>
             <div className="flex items-center gap-6">

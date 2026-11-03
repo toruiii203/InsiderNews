@@ -2,7 +2,7 @@ export const runtime = 'edge'
 
 import { NextRequest, NextResponse } from "next/server"
 import { verifySession } from "@/lib/session"
-import { supabaseAdmin } from "@/lib/supabase"
+import { db } from "@/lib/db"
 import { toCdnUrl } from "@/lib/cdn"
 
 interface Article {
@@ -53,37 +53,46 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "article.id and article.title are required." }, { status: 400 })
     }
 
-    const { data: subscribers, error } = await supabaseAdmin.from("subscribers").select("email")
-    if (error) throw error
+    const subscribers = await db.query(`SELECT email FROM subscribers`)
     if (!subscribers || subscribers.length === 0) {
       return NextResponse.json({ success: true, sent: 0, message: "No subscribers to notify." })
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? `https://${req.headers.get("host")}`
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://theinsiderph.com"
     const html = buildEmailHtml(article, baseUrl)
-    const subject = `📰 ${article.title}`
 
-    let sent = 0, failed = 0
+    const emails = subscribers.map((s: any) => s.email).filter(Boolean)
     const BATCH_SIZE = 50
-    for (let i = 0; i < subscribers.length; i += BATCH_SIZE) {
-      const batch = subscribers.slice(i, i + BATCH_SIZE)
-      const results = await Promise.allSettled(batch.map(sub =>
-        fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ from: fromEmail, to: sub.email, subject, html }),
-        })
-      ))
-      for (const r of results) {
-        if (r.status === "fulfilled" && r.value.ok) sent++
-        else failed++
+    let sentCount = 0
+
+    for (let i = 0; i < emails.length; i += BATCH_SIZE) {
+      const batch = emails.slice(i, i + BATCH_SIZE)
+      const res = await fetch("https://api.resend.com/emails/batch", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${resendKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(
+          batch.map((to: string) => ({
+            from: fromEmail,
+            to,
+            subject: `[Breaking] ${article.title}`,
+            html,
+          }))
+        ),
+      })
+
+      if (res.ok) sentCount += batch.length
+      else {
+        const errData = await res.json()
+        console.error("[Notify] Batch failed:", errData)
       }
     }
 
-    return NextResponse.json({ success: true, sent, failed, total: subscribers.length,
-      message: `Sent to ${sent} subscriber${sent !== 1 ? "s" : ""}${failed > 0 ? ` (${failed} failed)` : ""}.` })
+    return NextResponse.json({ success: true, sent: sentCount, total: emails.length })
   } catch (err) {
     console.error("[Notify] Error:", err)
-    return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 })
+    return NextResponse.json({ error: "Failed to send notifications." }, { status: 500 })
   }
 }

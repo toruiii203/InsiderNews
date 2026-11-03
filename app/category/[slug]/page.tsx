@@ -8,7 +8,7 @@ import { ArticleCard } from "@/components/article-card"
 import { BackToTop } from "@/components/back-to-top"
 import { MobileBottomNav } from "@/components/mobile-bottom-nav"
 import { categories, type Article } from "@/lib/mock-data"
-import { supabaseAdmin } from "@/lib/supabase"
+import { query } from "@/lib/db"
 
 interface CategoryPageProps { params: Promise<{ slug: string }> }
 
@@ -27,12 +27,22 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const category = categories.find(c => c.name.toLowerCase() === slug.toLowerCase())
   if (!category) notFound()
 
-  const { data: categoryArticles } = await supabaseAdmin.from("articles").select("*")
-    .ilike("category", slug).eq("status", "published")
-    .lte("published_at", new Date().toISOString())
-    .order("published_at", { ascending: false })
-
-  const articles: Article[] = categoryArticles ?? []
+  let articles: Article[] = []
+  try {
+    articles = await query<Article>(
+      `
+      SELECT * FROM articles
+      WHERE LOWER(category) = LOWER($1)
+        AND status = 'published'
+        AND published_at <= $2
+      ORDER BY published_at DESC;
+      `,
+      [slug, new Date().toISOString()]
+    )
+  } catch (err) {
+    console.error("[CategoryPage] Error fetching articles:", err)
+    articles = []
+  }
 
   return (
     <div className="min-h-screen bg-background">
