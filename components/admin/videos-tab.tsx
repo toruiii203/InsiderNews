@@ -71,7 +71,7 @@ function MediaUploadField({ value, onChange, label, kind = "video", adminSecret 
         body: prepared.blob,
       })
       if (!res.ok) {
-        setUploadError(`Upload failed (${res.status}). Please check storage settings.`)
+        const errJson = await res.json().catch(() => ({})); setUploadError(errJson.error || `Upload failed (${res.status}). Please check storage settings.`)
         return
       }
       const data = await res.json()

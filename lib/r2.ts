@@ -168,10 +168,16 @@ export async function uploadToR2({
     }
   }
 
-  // 3. No fallback — fail safely with informative error
+  // 3. No fallback — fail safely with informative diagnostic error
+  const debugKeys = [];
+  try {
+    const sym = Symbol.for("__cloudflare-request-context__");
+    const ctx = (globalThis as any)[sym];
+    if (ctx && ctx.env) debugKeys.push(...Object.keys(ctx.env));
+  } catch {}
   return {
     success: false,
     url: "",
-    error: "R2 storage unavailable: neither Cloudflare R2 binding (MEDIA_BUCKET) nor R2 S3 credentials (R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY) are configured.",
-  }
+    error: "R2 storage unavailable: MEDIA_BUCKET binding not found. Available env bindings: [" + debugKeys.join(", ") + "]",
+  };
 }
