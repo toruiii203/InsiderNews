@@ -74,7 +74,7 @@ function DateTimePicker({ value, onChange }: { value: string; onChange: (iso: st
 
 // --- Media Upload Field (URL + Drag & Drop) ---
 function MediaUploadField({ value, onChange, label, adminSecret }: {
-  adminSecret: string
+  adminSecret?: string
   value: string
   onChange: (url: string) => void
   label: string
@@ -174,7 +174,7 @@ function MediaUploadField({ value, onChange, label, adminSecret }: {
   )
 }
 
-export function ArticlesTab({ adminSecret }: { adminSecret: string }) {
+export function ArticlesTab({ adminSecret }: { adminSecret?: string }) {
   const [articles, setArticles]       = useState<Article[]>([])
   const [fetchStatus, setFetchStatus] = useState<"loading"|"done"|"error">("loading")
   const [searchQuery, setSearchQuery] = useState("")
@@ -339,7 +339,7 @@ export function ArticlesTab({ adminSecret }: { adminSecret: string }) {
 
 // ─── Article Form ─────────────────────────────────────────────────────────────
 function ArticleForm({ article, onClose, onSave, adminSecret }: {
-  adminSecret: string
+  adminSecret?: string
 
   article: Article | null
   onClose: () => void

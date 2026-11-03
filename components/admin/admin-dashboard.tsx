@@ -16,8 +16,7 @@ import { VideosTab } from "@/components/admin/videos-tab"
 import { SubscribersTab } from "@/components/admin/subscribers-tab"
 import { AboutTab } from "@/components/admin/about-tab"
 import { mockArticles } from "@/lib/mock-data"
-import type { AdminUser } from "@/app/admin/page"
-import { saveAccounts } from "@/app/admin/page"
+import { type AdminUser, saveAccounts } from "@/lib/admin-accounts"
 import { getSiteSettings, saveSiteSettings, type SiteSettings } from "@/components/footer"
 
 interface AdminDashboardProps {

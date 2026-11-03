@@ -46,7 +46,7 @@ async function run() {
     const articleCount = parseInt(articleRows[0].count, 10);
     console.log(`Current article count in Neon: ${articleCount}`);
 
-    if (articleCount === 0) {
+    if (articleCount === 0 && process.env.SEED_TEST_FIXTURES === "true") {
       console.log("Seeding baseline test articles from lib/mock-data.ts...");
       const mockArticles = [
         {

@@ -10,14 +10,35 @@ export async function GET(req: NextRequest) {
     const category = searchParams.get("category")
     const limit = Math.min(Math.max(1, parseInt(searchParams.get("limit") ?? "50", 10)), 200)
     const id = searchParams.get("id")
-    const status = searchParams.get("status") ?? "published"
+    const requestedStatus = searchParams.get("status")
 
-    const conditions: string[] = ["status = $1"]
-    const params: any[] = [status]
-    let paramIndex = 2
+    const session = await verifySession()
 
-    // Only published articles before now for public readers
-    if (status === "published") {
+    // Public / Unauthenticated callers:
+    // Strictly restrict to published articles whose publication date has passed.
+    // If an unauthenticated caller specifically requests drafts, scheduled, or non-published content, reject with 401.
+    if (!session) {
+      if (requestedStatus && requestedStatus !== "published") {
+        return NextResponse.json(
+          { error: "Unauthorised: Access to drafts and scheduled articles requires administrator authentication." },
+          { status: 401 }
+        )
+      }
+    }
+
+    const status = session && requestedStatus ? requestedStatus : "published"
+
+    const conditions: string[] = []
+    const params: any[] = []
+    let paramIndex = 1
+
+    if (status !== "all") {
+      conditions.push(`status = $${paramIndex++}`)
+      params.push(status)
+    }
+
+    // Public readers can only ever see published articles with published_at in the past
+    if (!session || status === "published") {
       conditions.push(`published_at <= $${paramIndex++}`)
       params.push(new Date().toISOString())
     }
@@ -33,9 +54,10 @@ export async function GET(req: NextRequest) {
     }
 
     params.push(limit)
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : ""
     const sql = `
       SELECT * FROM articles
-      WHERE ${conditions.join(" AND ")}
+      ${whereClause}
       ORDER BY published_at DESC
       LIMIT $${paramIndex}
     `
@@ -67,14 +89,14 @@ export async function POST(req: NextRequest) {
         body.excerpt ?? "",
         body.content ?? "",
         body.category,
-        body.author,
+        body.author ?? "Staff Reporter",
         body.image_url ?? "",
-        body.published_at || new Date().toISOString(),
+        body.published_at ?? new Date().toISOString(),
         body.is_breaking ?? false,
-        body.language ?? "EN",
+        body.language ?? "en",
         body.tags ?? [],
-        body.reading_time ?? 1,
-        body.status ?? "published",
+        body.reading_time ?? 3,
+        body.status ?? "draft",
       ]
     )
 
@@ -141,7 +163,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Missing article id" }, { status: 400 })
     }
 
-    await query("DELETE FROM articles WHERE id = $1", [id])
+    await query("DELETE FROM articles WHERE id = $1;", [id])
     return NextResponse.json({ success: true })
   } catch (err: any) {
     console.error("[API Articles DELETE] Error:", err)

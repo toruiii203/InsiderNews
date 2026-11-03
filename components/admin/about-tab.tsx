@@ -32,7 +32,7 @@ interface AboutContent {
 const inp = "w-full px-4 py-2 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-[#002D72] text-sm"
 const lbl = "text-sm font-medium text-foreground"
 
-export function AboutTab({ adminSecret }: { adminSecret: string }) {
+export function AboutTab({ adminSecret }: { adminSecret?: string }) {
   return (
     <div className="space-y-8">
       <div>
@@ -53,7 +53,7 @@ export function AboutTab({ adminSecret }: { adminSecret: string }) {
 }
 
 // ─── About Us content editor ──────────────────────────────────────────────
-function AboutContentEditor({ adminSecret }: { adminSecret: string }) {
+function AboutContentEditor({ adminSecret }: { adminSecret?: string }) {
   const [form, setForm] = useState<AboutContent | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -139,7 +139,7 @@ function AboutContentEditor({ adminSecret }: { adminSecret: string }) {
 }
 
 // ─── Staff / Writers manager ───────────────────────────────────────────────
-function StaffManager({ adminSecret }: { adminSecret: string }) {
+function StaffManager({ adminSecret }: { adminSecret?: string }) {
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -238,7 +238,7 @@ function StaffManager({ adminSecret }: { adminSecret: string }) {
 }
 
 function StaffForm({ member, onClose, onSaved, adminSecret }: {
-  adminSecret: string
+  adminSecret?: string
 
   member: StaffMember | null
   onClose: () => void

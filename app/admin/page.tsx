@@ -7,27 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { AdminDashboard } from "@/components/admin/admin-dashboard"
 
-export interface AdminUser {
-  id: string
-  username: string
-  password: string
-  displayName: string
-  role: "superadmin" | "editor" | "reporter"
-  createdAt: string
-}
-
-// Extra accounts stored in localStorage (added via admin panel)
-export function getAccounts(): AdminUser[] {
-  try {
-    const raw = localStorage.getItem("tinph_admin_accounts")
-    if (raw) return JSON.parse(raw)
-  } catch {}
-  return []
-}
-
-export function saveAccounts(accounts: AdminUser[]) {
-  localStorage.setItem("tinph_admin_accounts", JSON.stringify(accounts))
-}
+import { type AdminUser, getAccounts, saveAccounts } from "@/lib/admin-accounts"
 
 // Primary login: check env secret first, then localStorage accounts
 async function authenticate(username: string, password: string): Promise<AdminUser | null> {

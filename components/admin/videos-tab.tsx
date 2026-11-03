@@ -37,7 +37,7 @@ const FILE_TYPES = {
 } as const
 
 function MediaUploadField({ value, onChange, label, kind = "video", adminSecret }: {
-  adminSecret: string
+  adminSecret?: string
 
   value: string
   onChange: (url: string) => void
@@ -86,7 +86,7 @@ function MediaUploadField({ value, onChange, label, kind = "video", adminSecret 
   const handleFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return
     const file = files[0]
-    if (!config.allowed.includes(file.type)) { setUploadError(config.errorMsg); return }
+    if (!(config.allowed as readonly string[]).includes(file.type)) { setUploadError(config.errorMsg); return }
     uploadFile(file)
   }
 
@@ -147,7 +147,7 @@ function MediaUploadField({ value, onChange, label, kind = "video", adminSecret 
 }
 
 // ─── Videos Tab ─────────────────────────────────────────────────────────────
-export function VideosTab({ adminSecret }: { adminSecret: string }) {
+export function VideosTab({ adminSecret }: { adminSecret?: string }) {
   const [videos, setVideos] = useState<Video[]>([])
   const [fetchStatus, setFetchStatus] = useState<"loading" | "done" | "error">("loading")
   const [showAddForm, setShowAddForm] = useState(false)
@@ -300,6 +300,7 @@ export function VideosTab({ adminSecret }: { adminSecret: string }) {
 }
 
 interface VideoFormProps {
+  adminSecret?: string
   video: Video | null
   onClose: () => void
   onSave: (video: Video) => Promise<void>

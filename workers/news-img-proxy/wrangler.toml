@@ -1,0 +1,11 @@
+name = "news-img-proxy"
+main = "index.js"
+compatibility_date = "2026-11-01"
+
+routes = [
+  { pattern = "img.theinsidernewsph.com/*", zone_name = "theinsidernewsph.com" }
+]
+
+[[r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "insidernews-media"

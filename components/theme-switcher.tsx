@@ -41,7 +41,7 @@ export function ThemeSwitcher() {
         {THEMES.map((t) => {
           const active = theme === t.id
           return (
-            <button suppressHydrationWarning
+            <button
               key={t.id}
               onClick={() => setTheme(t.id)}
               suppressHydrationWarning

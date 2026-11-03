@@ -1,4 +1,4 @@
-// lib/r2.ts — Cloudflare R2 S3-compatible client for Edge runtime (using Web Crypto)
+// lib/r2.ts — Cloudflare R2 client for Edge runtime (Cloudflare Pages Binding & S3 API)
 
 interface R2UploadOptions {
   bucket: string
@@ -33,6 +33,32 @@ function toHex(buf: ArrayBuffer): string {
     .join("")
 }
 
+/**
+ * Resolve Cloudflare Pages R2 bucket binding.
+ * Tries @cloudflare/next-on-pages getRequestContext(), then process.env / globalThis bindings.
+ */
+async function getR2Binding(): Promise<any | null> {
+  try {
+    const { getRequestContext } = await import("@cloudflare/next-on-pages")
+    const ctx = getRequestContext()
+    if (ctx?.env) {
+      const binding = (ctx.env as any).MEDIA_BUCKET ?? (ctx.env as any).R2_BUCKET
+      if (binding && typeof binding.put === "function") {
+        return binding
+      }
+    }
+  } catch {
+    // getRequestContext() is only available inside active Cloudflare Pages request
+  }
+
+  const globalBinding = (process.env as any).MEDIA_BUCKET ?? (globalThis as any).MEDIA_BUCKET ?? (process.env as any).R2_BUCKET ?? (globalThis as any).R2_BUCKET
+  if (globalBinding && typeof globalBinding.put === "function") {
+    return globalBinding
+  }
+
+  return null
+}
+
 export async function uploadToR2({
   bucket,
   key,
@@ -40,39 +66,42 @@ export async function uploadToR2({
   contentType,
   cacheControl = "max-age=31536000, public",
 }: R2UploadOptions): Promise<{ success: boolean; url: string; error?: string }> {
-  // 1. Check for native Cloudflare Pages R2 binding (e.g. MEDIA_BUCKET or R2_BUCKET)
-  const envBinding = (process.env as any).MEDIA_BUCKET ?? (globalThis as any).MEDIA_BUCKET
-  if (envBinding && typeof envBinding.put === "function") {
+  // Ensure the object key has the bucket prefix for unified routing: images/<filename> or videos/<filename>
+  const fullKey = key.startsWith(`${bucket}/`) ? key : `${bucket}/${key}`
+
+  // 1. Try native Cloudflare Pages R2 binding (fastest & native)
+  const r2Binding = await getR2Binding()
+  if (r2Binding) {
     try {
-      await envBinding.put(key, buffer, {
+      await r2Binding.put(fullKey, buffer, {
         httpMetadata: {
           contentType,
           cacheControl,
         },
       })
-      const cdnUrl = `https://img.theinsidernewsph.com/${bucket}/${key}`
+      const cdnUrl = `https://img.theinsidernewsph.com/${fullKey}`
       return { success: true, url: cdnUrl }
     } catch (err: any) {
-      console.error("[R2 Binding] Error:", err)
-      return { success: false, url: "", error: err.message }
+      console.error("[R2 Binding Upload Error]:", err)
+      return { success: false, url: "", error: `Cloudflare R2 binding upload failed: ${err.message}` }
     }
   }
 
-  // 2. Check for S3-compatible R2 credentials
+  // 2. Try S3-compatible R2 credentials (works in any Edge or Node environment)
   const accountId = process.env.R2_ACCOUNT_ID
   const accessKeyId = process.env.R2_ACCESS_KEY_ID
   const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY
-  const r2Bucket = process.env.R2_BUCKET_NAME || bucket
+  const r2BucketName = process.env.R2_BUCKET_NAME || "insidernews-media"
 
   if (accountId && accessKeyId && secretAccessKey) {
     try {
       const now = new Date()
       const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "") // YYYYMMDDTHHMMSSZ
-      const dateStamp = amzDate.slice(0, 8) // YYYYMMDD
+      const dateStamp = amzDate.slice(0, 8)
       const region = "auto"
       const service = "s3"
       const host = `${accountId}.r2.cloudflarestorage.com`
-      const path = `/${r2Bucket}/${key}`
+      const path = `/${r2BucketName}/${fullKey}`
       const url = `https://${host}${path}`
 
       const payloadHash = await sha256Hex(buffer)
@@ -85,17 +114,12 @@ export async function uploadToR2({
         `x-amz-date:${amzDate}\n`
 
       const signedHeaders = "cache-control;content-type;host;x-amz-content-sha256;x-amz-date"
-
-      const canonicalRequest =
-        `PUT\n${path}\n\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`
-
+      const canonicalRequest = `PUT\n${path}\n\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`
       const canonicalRequestHash = await sha256Hex(canonicalRequest)
 
       const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`
-      const stringToSign =
-        `AWS4-HMAC-SHA256\n${amzDate}\n${credentialScope}\n${canonicalRequestHash}`
+      const stringToSign = `AWS4-HMAC-SHA256\n${amzDate}\n${credentialScope}\n${canonicalRequestHash}`
 
-      // Calculate signature: kSecret -> kDate -> kRegion -> kService -> kSigning
       const kDate = await hmacSha256(new TextEncoder().encode(`AWS4${secretAccessKey}`), dateStamp)
       const kRegion = await hmacSha256(kDate, region)
       const kService = await hmacSha256(kRegion, service)
@@ -123,15 +147,18 @@ export async function uploadToR2({
         return { success: false, url: "", error: `R2 S3 error (${res.status}): ${text}` }
       }
 
-      const cdnUrl = `https://img.theinsidernewsph.com/${bucket}/${key}`
+      const cdnUrl = `https://img.theinsidernewsph.com/${fullKey}`
       return { success: true, url: cdnUrl }
     } catch (err: any) {
-      console.error("[R2 S3 Upload] Error:", err)
-      return { success: false, url: "", error: err.message }
+      console.error("[R2 S3 Upload Error]:", err)
+      return { success: false, url: "", error: `R2 S3 upload failed: ${err.message}` }
     }
   }
 
-  // 3. Fallback: return deterministic CDN URL for preview/staging
-  const cdnUrl = `https://img.theinsidernewsph.com/${bucket}/${key}`
-  return { success: true, url: cdnUrl }
+  // 3. No fallback — fail safely with informative error
+  return {
+    success: false,
+    url: "",
+    error: "R2 storage unavailable: neither Cloudflare R2 binding (MEDIA_BUCKET) nor R2 S3 credentials (R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY) are configured.",
+  }
 }
