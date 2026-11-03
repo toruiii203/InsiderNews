@@ -184,18 +184,19 @@ export function ArticlesTab({ adminSecret }: { adminSecret?: string }) {
   const loadArticles = async () => {
     setFetchStatus("loading")
     try {
-      const res = await fetch("/api/articles?limit=100", {
-        
-      })
-      const data = await res.json()
-      // merge with scheduled (future) articles too
-      const res2 = await fetch("/api/articles/all", {
-        
-      })
-      const data2 = res2.ok ? await res2.json() : { articles: [] }
-      setArticles(data2.articles ?? data.articles ?? [])
-      setFetchStatus("done")
-    } catch {
+      const res = await fetch("/api/articles/all")
+      if (res.ok) {
+        const data = await res.json()
+        if (data.articles && data.articles.length > 0) {
+          setArticles(data.articles)
+          setFetchStatus("done")
+          return
+        }
+      }
+      const resFallback = await fetch("/api/articles?limit=100")
+      const dataFallback = await resFallback.json()
+      setArticles(dataFallback.articles || [])
+      setFetchStatus("done")    } catch {
       setFetchStatus("error")
     }
   }

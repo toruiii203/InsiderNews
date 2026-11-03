@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     if (!await verifySession()) return NextResponse.json({ error: "Unauthorised" }, { status: 401 })
 
     const articles = await query(
-      "SELECT * FROM articles ORDER BY published_at DESC;"
+      "SELECT * FROM articles ORDER BY published_at DESC LIMIT 200;"
     )
 
     return NextResponse.json({ articles })

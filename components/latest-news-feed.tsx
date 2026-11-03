@@ -1,5 +1,7 @@
 "use client"
 
+let cachedArticles: any[] | null = null
+
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
@@ -16,14 +18,14 @@ export function LatestNewsFeed() {
   const { t, language } = useLanguage()
   const [activeCategory, setActiveCategory] = useState("All")
   const [currentPage, setCurrentPage] = useState(1)
-  const [articles, setArticles] = useState<Article[]>([])
-  const [loading, setLoading] = useState(true)
+  const [articles, setArticles] = useState<Article[]>(() => cachedArticles || [])
+  const [loading, setLoading] = useState(() => !cachedArticles)
 
   useEffect(() => {
     fetch("/api/articles?limit=100")
       .then(r => r.json())
       .then(d => {
-        setArticles(d.articles ?? [])
+        const list = d.articles ?? []; cachedArticles = list; setArticles(list)
       })
       .catch(() => setArticles([]))
       .finally(() => setLoading(false))

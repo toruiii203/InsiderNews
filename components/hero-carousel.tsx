@@ -1,5 +1,7 @@
 "use client"
 
+let cachedHeroArticles: any[] | null = null
+
 import { useState, useEffect, useCallback } from "react"
 import Image from "next/image"
 import Link from "next/link"
@@ -11,7 +13,7 @@ import { toCdnUrl } from "@/lib/cdn"
 export function HeroCarousel() {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [mounted, setMounted] = useState(false)
-  const [articles, setArticles] = useState<Article[]>([])
+  const [articles, setArticles] = useState<Article[]>(() => cachedHeroArticles || [])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -20,7 +22,7 @@ export function HeroCarousel() {
       .then(r => r.json())
       .then(d => {
         if (d.articles?.length) {
-          setArticles(d.articles.slice(0, 5))
+          const list = d.articles.slice(0, 5); cachedHeroArticles = list; setArticles(list)
         } else {
           setArticles([])
         }

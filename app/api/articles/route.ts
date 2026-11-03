@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
     `
 
     const articles = await query(sql, params)
-    return NextResponse.json({ articles })
+    return NextResponse.json({ articles }, { headers: { "Cache-Control": session ? "private, no-cache" : "public, s-maxage=60, stale-while-revalidate=300" } })
   } catch (err: any) {
     console.error("[API Articles GET] Error:", err)
     return NextResponse.json({ error: err.message }, { status: 500 })
