@@ -281,15 +281,19 @@ async function runTests() {
     `Unconfigured R2 correctly fails safely with HTTP 500 and descriptive error without fake URLs`
   );
 
-  // --- 7. WORKER PROXY UNIT VALIDATION ---
-  console.log("\n--- 7. R2 Worker Routing & Status Contract ---");
-  // Test worker code directly
+  // --- 7. WORKER PROXY & PREVIEW UNIT VALIDATION ---
+  console.log("\n--- 7. R2 Worker Routing, Status Contract & Byte Fidelity ---");
   const workerModule = require("../workers/news-img-proxy/index.js").default;
+  const previewWorkerModule = require("../workers/news-img-proxy-preview/index.js").default;
   
-  // Test 7a: 405 on mutations
+  // Test 7a: 405 on mutations (both workers)
   const postReq = new Request("https://img.theinsidernewsph.com/images/test.jpg", { method: "POST" });
   const postRes = await workerModule.fetch(postReq, {}, {});
-  assert(postRes.status === 405, `Worker rejects POST with 405 Method Not Allowed (${postRes.status})`);
+  assert(postRes.status === 405, `Production worker rejects POST with 405 Method Not Allowed (${postRes.status})`);
+
+  const previewPostReq = new Request("https://preview.workers.dev/images/test.jpg", { method: "POST" });
+  const previewPostRes = await previewWorkerModule.fetch(previewPostReq, {}, {});
+  assert(previewPostRes.status === 405, `Preview worker rejects POST with 405 Method Not Allowed (${previewPostRes.status})`);
 
   // Test 7b: 404 on missing object
   const mockR2Empty = {
@@ -299,17 +303,45 @@ async function runTests() {
   const get404Res = await workerModule.fetch(getReq, { MEDIA_BUCKET: mockR2Empty }, {});
   assert(get404Res.status === 404, `Worker returns 404 for missing R2 objects (${get404Res.status})`);
 
-  // Test 7c: 200 on existing object
-  const mockR2Found = {
-    get: async (key) => ({
-      httpEtag: '"test-etag-123"',
-      writeHttpMetadata: (headers) => { headers.set("content-type", "image/jpeg"); },
-      body: new Uint8Array([1, 2, 3]),
-    }),
+  const previewGet404 = await previewWorkerModule.fetch(getReq, { MEDIA_BUCKET: mockR2Empty }, {});
+  assert(previewGet404.status === 404, `Preview worker returns 404 for missing R2 objects (${previewGet404.status})`);
+
+  // Test 7c: Exact byte fidelity, content type & exact object key matching
+  const testPayload = Buffer.from([0x52, 0x49, 0x46, 0x46, 0x1a, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50]); // WEBP header
+  let requestedKey = "";
+
+  const mockR2Storage = new Map();
+  mockR2Storage.set("images/test-image-e2e.webp", {
+    body: testPayload,
+    httpEtag: '"webp-hash-98765"',
+    contentType: "image/webp",
+  });
+
+  const mockR2WithPersistence = {
+    get: async (key) => {
+      requestedKey = key;
+      const item = mockR2Storage.get(key);
+      if (!item) return null;
+      return {
+        httpEtag: item.httpEtag,
+        body: item.body,
+        writeHttpMetadata: (headers) => {
+          headers.set("content-type", item.contentType);
+        },
+      };
+    },
   };
-  const get200Res = await workerModule.fetch(getReq, { MEDIA_BUCKET: mockR2Found }, {});
-  assert(get200Res.status === 200, `Worker returns 200 for found R2 objects with cache headers (${get200Res.status})`);
-  assert(get200Res.headers.get("cache-control")?.includes("immutable"), "Worker attaches immutable cache-control header");
+
+  const testGetReq = new Request("https://preview.workers.dev/images/test-image-e2e.webp", { method: "GET" });
+  const testGetRes = await previewWorkerModule.fetch(testGetReq, { MEDIA_BUCKET: mockR2WithPersistence }, {});
+  assert(testGetRes.status === 200, `Preview worker returns 200 for stored R2 media (${testGetRes.status})`);
+  assert(requestedKey === "images/test-image-e2e.webp", `Exact object key matched: ${requestedKey}`);
+  assert(testGetRes.headers.get("content-type") === "image/webp", `Content-type preserved: ${testGetRes.headers.get("content-type")}`);
+  assert(testGetRes.headers.get("cache-control")?.includes("immutable"), "Immutable cache header applied");
+
+  const retrievedBytes = Buffer.from(await testGetRes.arrayBuffer());
+  const bytesMatch = Buffer.compare(testPayload, retrievedBytes) === 0;
+  assert(bytesMatch, `Exact byte match: uploaded ${testPayload.length} bytes === retrieved ${retrievedBytes.length} bytes`);
 
   await client.end();
 
