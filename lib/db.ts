@@ -2,9 +2,13 @@ import { neon } from "@neondatabase/serverless"
 import { getRuntimeEnv } from "@/lib/env"
 
 function getDatabaseUrl(): string {
-  const url = getRuntimeEnv("DATABASE_URL")
+  let url = getRuntimeEnv("DATABASE_URL")
   if (!url) {
     throw new Error("DATABASE_URL environment variable is missing.")
+  }
+  url = url.trim()
+  if ((url.startsWith('"') && url.endsWith('"')) || (url.startsWith("'") && url.endsWith("'"))) {
+    url = url.slice(1, -1).trim()
   }
   return url
 }
@@ -18,9 +22,18 @@ export function getDb() {
  * Safe for Cloudflare Pages Edge runtime and serverless functions.
  */
 export async function query<T = any>(text: string, params: any[] = []): Promise<T[]> {
-  const sql = getDb()
-  const rows = await sql.query(text, params)
-  return rows as T[]
+  try {
+    const sql = getDb()
+    const rows = await sql.query(text, params)
+    return rows as T[]
+  } catch (err: any) {
+    let host = "unknown"
+    try {
+      const u = new URL(getDatabaseUrl())
+      host = u.hostname
+    } catch {}
+    throw new Error(`Database query error [target: ${host}]: ${err.message}`)
+  }
 }
 
 /**
