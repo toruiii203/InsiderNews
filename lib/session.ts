@@ -2,31 +2,35 @@ import { jwtVerify, SignJWT } from "jose"
 import { cookies } from "next/headers"
 
 /**
- * Get or derive a dedicated JWT signing key separate from the administrative password.
- * Prioritizes JWT_SECRET or SESSION_SECRET from environment.
- * If only ADMIN_SECRET is provided, derives a distinct 256-bit key via SHA-256 hashing
- * with an application-specific namespace so the raw login password is never the JWT key.
+ * Resolve the cryptographic JWT signing key.
+ * In production, JWT_SECRET is strictly required to prevent secret reuse or weak defaults.
+ * In development/test, derives from ADMIN_SECRET or uses a local test secret.
  */
 async function getJwtKey(): Promise<Uint8Array> {
   const explicitSecret = process.env.JWT_SECRET || process.env.SESSION_SECRET
 
   if (explicitSecret) {
+    if (explicitSecret.length < 32) {
+      throw new Error("JWT_SECRET must be at least 32 characters long for production security")
+    }
     return new TextEncoder().encode(explicitSecret)
   }
 
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "CRITICAL SECURITY CONFIGURATION: JWT_SECRET environment variable is strictly required in production and must not be derived from ADMIN_SECRET."
+    )
+  }
+
+  // Non-production fallback (local dev / automated tests only)
   const adminSecret = process.env.ADMIN_SECRET
   if (adminSecret) {
-    // Derive a distinct 256-bit key using Web Crypto SHA-256
-    const namespaced = `INSIDERNEWS_JWT_SESSION_V1:${adminSecret}`
+    const namespaced = `INSIDERNEWS_DEV_ONLY_JWT:${adminSecret}`
     const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(namespaced))
     return new Uint8Array(hash)
   }
 
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("ADMIN_SECRET or JWT_SECRET environment variable is missing in production")
-  }
-
-  return new TextEncoder().encode("local_dev_secret_only_never_use_in_production")
+  return new TextEncoder().encode("local_dev_test_secret_32_characters_minimum_key!!")
 }
 
 export async function encrypt(payload: any) {

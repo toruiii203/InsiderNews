@@ -16,9 +16,10 @@ async function authenticate(username: string, secret: string): Promise<AdminUser
       body: JSON.stringify({ secret, username }),
     })
     if (!res.ok) return null
+    const data = await res.json().catch(() => ({}))
     return {
       ...PRIMARY_ADMIN_PROFILE,
-      username: username || "admin",
+      username: data.username || "admin",
     }
   } catch {
     return null

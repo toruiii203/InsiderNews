@@ -154,6 +154,8 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
+export { PATCH as PUT }
+
 export async function DELETE(req: NextRequest) {
   try {
     if (!await verifySession()) return NextResponse.json({ error: "Unauthorised" }, { status: 401 })
