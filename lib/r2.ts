@@ -33,6 +33,19 @@ function toHex(buf: ArrayBuffer): string {
     .join("")
 }
 
+function extractR2Bucket(env: any): any | null {
+  if (!env) return null;
+  if (env.MEDIA_BUCKET && typeof env.MEDIA_BUCKET.put === "function") return env.MEDIA_BUCKET;
+  if (env.R2_BUCKET && typeof env.R2_BUCKET.put === "function") return env.R2_BUCKET;
+  for (const key of Object.keys(env)) {
+    const trimmed = key.trim();
+    if ((trimmed === "MEDIA_BUCKET" || trimmed === "R2_BUCKET") && env[key] && typeof env[key].put === "function") {
+      return env[key];
+    }
+  }
+  return null;
+}
+
 /**
  * Resolve Cloudflare Pages R2 bucket binding.
  * Tries @cloudflare/next-on-pages getRequestContext(), then process.env / globalThis bindings.
@@ -40,36 +53,26 @@ function toHex(buf: ArrayBuffer): string {
 async function getR2Binding(): Promise<any | null> {
   // 1. Check direct Cloudflare request context via global symbol
   try {
-    const symbol = Symbol.for("__cloudflare-request-context__")
-    const cfContext = (globalThis as any)[symbol]
-    if (cfContext?.env) {
-      const binding = cfContext.env.MEDIA_BUCKET ?? cfContext.env.R2_BUCKET
-      if (binding && typeof binding.put === "function") {
-        return binding
-      }
+    const symbol = Symbol.for("__cloudflare-request-context__");
+    const cfContext = (globalThis as any)[symbol];
+    if (cfContext && cfContext.env) {
+      const binding = extractR2Bucket(cfContext.env);
+      if (binding) return binding;
     }
   } catch {}
 
   // 2. Try @cloudflare/next-on-pages dynamic import
   try {
-    const { getRequestContext } = await import("@cloudflare/next-on-pages")
-    const ctx = getRequestContext()
-    if (ctx?.env) {
-      const binding = (ctx.env as any).MEDIA_BUCKET ?? (ctx.env as any).R2_BUCKET
-      if (binding && typeof binding.put === "function") {
-        return binding
-      }
+    const { getRequestContext } = await import("@cloudflare/next-on-pages");
+    const ctx = getRequestContext();
+    if (ctx && ctx.env) {
+      const binding = extractR2Bucket(ctx.env);
+      if (binding) return binding;
     }
-  } catch {
-    // getRequestContext() is only available inside active Cloudflare Pages request
-  }
+  } catch {}
 
-  const globalBinding = (process.env as any).MEDIA_BUCKET ?? (globalThis as any).MEDIA_BUCKET ?? (process.env as any).R2_BUCKET ?? (globalThis as any).R2_BUCKET
-  if (globalBinding && typeof globalBinding.put === "function") {
-    return globalBinding
-  }
-
-  return null
+  const globalObj = Object.assign({}, typeof process !== "undefined" ? process.env : {}, globalThis as any);
+  return extractR2Bucket(globalObj);
 }
 
 export async function uploadToR2({
